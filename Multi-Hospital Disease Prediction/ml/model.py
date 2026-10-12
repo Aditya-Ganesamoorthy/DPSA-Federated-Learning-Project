@@ -81,13 +81,17 @@ def make_optimizer(model: nn.Module, lr=config.LR, momentum=config.MOMENTUM):
 
 
 def train_local(model: nn.Module, X: np.ndarray, y: np.ndarray, epochs: int, seed: int,
-                lr=config.LR, momentum=config.MOMENTUM, batch_size=config.BATCH_SIZE) -> float:
-    """Plain mini-batch SGD. Returns mean loss of the last epoch."""
+                lr=config.LR, momentum=config.MOMENTUM, batch_size=config.BATCH_SIZE,
+                prox_mu: float = 0.0, prox_ref: list | None = None) -> float:
+    """Plain mini-batch SGD. Returns mean loss of the last epoch.
+
+    FedProx: if prox_mu > 0, adds mu * (w - w_global) to each gradient (the proximal term's gradient)."""
     model.train()
     opt = make_optimizer(model, lr, momentum)
     loss_fn = nn.BCEWithLogitsLoss()
     Xt, yt = torch.from_numpy(X), torch.from_numpy(y)
     g = torch.Generator().manual_seed(seed)
+    ref = [torch.tensor(a) for a in prox_ref] if (prox_mu > 0 and prox_ref is not None) else None
     n, last = len(Xt), 0.0
     for _ in range(epochs):
         perm = torch.randperm(n, generator=g)
@@ -97,6 +101,9 @@ def train_local(model: nn.Module, X: np.ndarray, y: np.ndarray, epochs: int, see
             opt.zero_grad()
             loss = loss_fn(model(Xt[b]), yt[b])
             loss.backward()
+            if ref is not None:
+                for p_, r_ in zip(model.parameters(), ref):
+                    p_.grad.add_(prox_mu * (p_.detach() - r_))
             opt.step()
             tot += loss.item() * len(b)
         last = tot / n

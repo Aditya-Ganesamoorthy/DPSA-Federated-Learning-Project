@@ -39,10 +39,12 @@ class _Proxy(ClientProxy):
 class HospitalClient(NumPyClient):
     """One hospital. Loads ONLY its own CSV."""
 
-    def __init__(self, scenario: str, idx: int, store: dp.AccountantStore | None = None):
+    def __init__(self, scenario: str, idx: int, store: dp.AccountantStore | None = None, label_flip: bool = False):
         self.idx = idx
         self.cid = f"hospital_{idx}"
         self.X, self.y = M.load_xy(M.client_path(scenario, idx))
+        if label_flip:                       # malicious hospital: flips every training label
+            self.y = 1.0 - self.y
         self.store = store
 
     def get_parameters(self, config_):
@@ -55,9 +57,13 @@ class HospitalClient(NumPyClient):
         if sigma > 0:
             loss = dp.train_local_dp(net, self.X, self.y, epochs, seed, sigma, self.store, self.cid)
         else:
-            loss = M.train_local(net, self.X, self.y, epochs, seed)
+            loss = M.train_local(net, self.X, self.y, epochs, seed, prox_mu=float(cfg.get("prox_mu", 0.0)),
+                                 prox_ref=parameters)
         n = len(self.X)
         out = M.get_parameters(net)
+        qb = int(cfg.get("quant_bits", 0))
+        if qb:                               # lossy compression of the UPDATE (delta), per-tensor symmetric
+            out = [g + quantize_delta(o - g, qb) for o, g in zip(out, parameters)]
         if cfg.get("secagg", False):
             flat = np.concatenate([a.ravel() for a in out]).astype(np.float64)
             w = flat * (n / float(cfg["total_n"]))                       # pre-weight: plain sum == FedAvg
@@ -71,6 +77,24 @@ class HospitalClient(NumPyClient):
         M.set_parameters(net, parameters)
         m = metrics.compute(self.y, M.predict_proba(net, self.X))
         return float(m["loss"]), len(self.X), {k: m[k] for k in ("accuracy", "recall", "auc")}
+
+
+def quantize_delta(delta: np.ndarray, bits: int) -> np.ndarray:
+    """Uniform symmetric quantisation of an update tensor to `bits` bits (returned dequantised)."""
+    m = float(np.max(np.abs(delta)))
+    if m == 0:
+        return delta
+    levels = 2 ** (bits - 1) - 1
+    return (np.round(delta / m * levels) / levels * m).astype(np.float32)
+
+
+class MedianFedAvg(FedAvg):
+    """Robust aggregation: coordinate-wise median of client models (ignores sample counts)."""
+
+    def aggregate_fit(self, server_round, results, failures):
+        arrs = [parameters_to_ndarrays(r.parameters) for _, r in results]
+        med = [np.median(np.stack([a[i] for a in arrs]), axis=0).astype(np.float32) for i in range(len(arrs[0]))]
+        return ndarrays_to_parameters(med), {}
 
 
 class SecAggFedAvg(FedAvg):
@@ -99,7 +123,8 @@ def _bytes(arrs) -> int:
 
 
 def run_fl(scenario: str, seed: int, rounds: int = config.FL_ROUNDS, local_epochs: int = config.LOCAL_EPOCHS,
-           sigma: float = 0.0, secure: bool = False, verbose: bool = False) -> dict:
+           sigma: float = 0.0, secure: bool = False, verbose: bool = False, prox_mu: float = 0.0,
+           quant_bits: int = 0, poisoned_client: int | None = None, aggregator: str = "fedavg") -> dict:
     """Run one federated experiment. Returns per-round log, final params and (if DP) epsilon."""
     Xte, yte = M.load_xy(config.CLIENT_DIR / "test.csv")
     Xva, yva = M.load_xy(config.CLIENT_DIR / "val.csv")
@@ -121,7 +146,8 @@ def run_fl(scenario: str, seed: int, rounds: int = config.FL_ROUNDS, local_epoch
 
     common = dict(fraction_fit=1.0, fraction_evaluate=0.0, min_fit_clients=K, min_available_clients=K,
                   evaluate_fn=evaluate_fn, accept_failures=False)
-    strategy = SecAggFedAvg(shapes, K, **common) if secure else FedAvg(**common)
+    strategy = (SecAggFedAvg(shapes, K, **common) if secure
+                else MedianFedAvg(**common) if aggregator == "median" else FedAvg(**common))
     params = ndarrays_to_parameters(init)
 
     log.append({"round": 0})
@@ -133,13 +159,14 @@ def run_fl(scenario: str, seed: int, rounds: int = config.FL_ROUNDS, local_epoch
         results, up, down = [], 0, 0
         for k in range(1, K + 1):
             # Flower re-creates clients every round: the accountant store lives outside them.
-            client = HospitalClient(scenario, k, store)
+            client = HospitalClient(scenario, k, store, label_flip=(k == poisoned_client))
             cfg = {"seed": seed * 10_000 + rnd * 100 + k, "epochs": local_epochs, "sigma": sigma,
+                   "prox_mu": prox_mu, "quant_bits": quant_bits,
                    "secagg": secure, "total_n": sum(counts), "n_clients": K,
                    "secagg_seed": seed * 100_000 + rnd}
             new, n, fm = client.fit([a.copy() for a in cur], cfg)
             down += _bytes(cur)
-            up += _bytes(new)
+            up += (sum(int(np.ceil(a.size * quant_bits / 8)) + 4 for a in new) if quant_bits else _bytes(new))
             res = FitRes(status=Status(Code.OK, "ok"), parameters=ndarrays_to_parameters(new),
                          num_examples=n, metrics=fm)
             results.append((_Proxy(str(k)), res))
