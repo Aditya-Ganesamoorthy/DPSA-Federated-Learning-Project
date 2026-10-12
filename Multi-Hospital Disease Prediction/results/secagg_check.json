@@ -1,0 +1,37 @@
+{
+ "n_params": 1057,
+ "client_counts": [
+  900,
+  539,
+  359
+ ],
+ "modulus": "2^32",
+ "fixed_point_bits": 20,
+ "integer_masked_sum_vs_plain_sum_max_abs_diff": 0,
+ "float_error_vs_plain_fedavg_one_round": 1.3143520334046865e-06,
+ "single_masked_update_correlation_with_true": [
+  -0.0328441200419823,
+  -0.0469390694233603,
+  0.006672939016597154
+ ],
+ "dropout_float_error": 2047.771243095398,
+ "dropout_cancellation_failed": true,
+ "full_run": {
+  "max_param_diff_vs_plain_fedavg": [
+   0.06071099638938904,
+   0.030317917466163635,
+   0.05043444037437439,
+   0.04077066481113434,
+   0.04314364120364189
+  ],
+  "test_auc_abs_diff": [
+   0.00020002000200014525,
+   0.0015223744596684075,
+   0.00981209232034308,
+   0.002366903357002348,
+   0.0012001200120012046
+  ],
+  "rounds": 20,
+  "note": "tiny fixed-point differences are amplified by SGD over rounds; metrics agree"
+ }
+}

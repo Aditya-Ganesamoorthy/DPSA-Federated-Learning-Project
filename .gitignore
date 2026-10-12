@@ -10,3 +10,5 @@ frontend/node_modules/
 frontend/dist/
 *.log
 Multi-Hospital Disease Prediction/results/runs/
+Multi-Hospital Disease Prediction/prefill_*.log
+Multi-Hospital Disease Prediction/prefill_*.err

@@ -1,0 +1,58 @@
+{
+ "model_params": 1057,
+ "clients": 3,
+ "bytes_per_param": 4,
+ "target_auc": 0.5022466135502439,
+ "by_local_epochs": [
+  {
+   "local_epochs": 1,
+   "n_params": 1057,
+   "bytes_per_client_per_round": 8456,
+   "bytes_per_round_total": 25368,
+   "rounds": 20,
+   "total_bytes": 507360,
+   "total_mb": 0.50736,
+   "measured_bytes_per_round_total": 25368.0,
+   "mean_wall_s_per_round": 0.2471830129623413,
+   "rounds_to_loss_convergence_10pct": 1,
+   "rounds_to_95pct_of_centralized_auc": 0,
+   "final_test_auc": 0.5113585432617337
+  },
+  {
+   "local_epochs": 2,
+   "n_params": 1057,
+   "bytes_per_client_per_round": 8456,
+   "bytes_per_round_total": 25368,
+   "rounds": 20,
+   "total_bytes": 507360,
+   "total_mb": 0.50736,
+   "measured_bytes_per_round_total": 25368.0,
+   "mean_wall_s_per_round": 0.30439826647440593,
+   "rounds_to_loss_convergence_10pct": 1,
+   "rounds_to_95pct_of_centralized_auc": 0,
+   "final_test_auc": 0.5155367388590711
+  },
+  {
+   "local_epochs": 5,
+   "n_params": 1057,
+   "bytes_per_client_per_round": 8456,
+   "bytes_per_round_total": 25368,
+   "rounds": 20,
+   "total_bytes": 507360,
+   "total_mb": 0.50736,
+   "measured_bytes_per_round_total": 25368.0,
+   "mean_wall_s_per_round": 0.5060475111007691,
+   "rounds_to_loss_convergence_10pct": 16,
+   "rounds_to_95pct_of_centralized_auc": 0,
+   "final_test_auc": 0.5171850518385172
+  }
+ ],
+ "raw_data": {
+  "rows": 1798,
+  "csv_bytes": 84231,
+  "float32_matrix_bytes": 115072,
+  "csv_mb": 0.084231,
+  "float32_matrix_mb": 0.115072
+ },
+ "note": "Counts upload + download for all clients. AUC-based rounds-to-target is not meaningful when AUC ~ 0.5, so a training-loss convergence proxy is also reported."
+}
