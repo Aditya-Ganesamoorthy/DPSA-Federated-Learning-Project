@@ -1,0 +1,39 @@
+Project Needs:
+
+
+Implementing Privacy-Preserving ML using Federated Learning
+
+
+> Project Title: "Decentralized Machine Learning: Implementing Federated Learning for Privacy Preservation"
+
+> Problem Statement: 
+
+Traditional machine learning methods require centralized data storage, leading to privacy risks. 
+Federated Learning allows multiple users to collaboratively train a model without sharing raw data, improving privacy while maintaining performance.
+
+
+> Project Requirements:
+
+* Choose a dataset that simulates multiple users or devices (e.g., IoT, healthcare, or finance).
+* Implement federated learning using a framework like TensorFlow Federated (TFF), PySyft, or Flower.
+* Compare federated learning with traditional centralized learning in terms of accuracy and privacy.
+* Analyze communication efficiency, security risks, and model performance in a federated setting.
+* Implement techniques like Secure Aggregation or Differential Privacy in Federated Learning for additional security.
+
+
+> Guiding Questions: 
+
+* How does federated learning differ from traditional centralized machine learning? 
+* What are the main challenges of federated learning (e.g., communication overhead, heterogeneity, security risks)?
+* How does model aggregation work in federated learning?
+* What techniques can enhance privacy and security in federated learning?
+* What are the real-world applications of federated learning in industries like healthcare and finance?
+
+
+> Ensure all these are done:
+
+* Dataset Selection, Client Setup \& Problem Definition
+* Implementation of Federated Learning/ Differential Privacy  \& Model Aggregation
+* Comparison
+* Privacy, Security, Communication Efficiency / Budget \& Results Analysis
+* Documentation, Presentation \& Demonstration
