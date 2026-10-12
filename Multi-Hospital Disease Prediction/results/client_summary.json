@@ -1,0 +1,114 @@
+{
+  "split_rows": {
+    "train": 1798,
+    "val": 300,
+    "test": 600,
+    "attack": 300
+  },
+  "k_anonymity_pooled": 25,
+  "scenarios": {
+    "iid": [
+      {
+        "hospital": "hospital_1",
+        "rows": 600,
+        "positives": 304,
+        "prevalence": 0.5066666666666667,
+        "age_bands": {
+          "30-39": 108,
+          "40-49": 109,
+          "50-59": 121,
+          "60-69": 123,
+          "70-79": 124,
+          "80-89": 15
+        },
+        "k_anonymity": 7
+      },
+      {
+        "hospital": "hospital_2",
+        "rows": 599,
+        "positives": 303,
+        "prevalence": 0.5058430717863105,
+        "age_bands": {
+          "30-39": 122,
+          "40-49": 108,
+          "50-59": 127,
+          "60-69": 111,
+          "70-79": 121,
+          "80-89": 10
+        },
+        "k_anonymity": 5
+      },
+      {
+        "hospital": "hospital_3",
+        "rows": 599,
+        "positives": 303,
+        "prevalence": 0.5058430717863105,
+        "age_bands": {
+          "30-39": 128,
+          "40-49": 125,
+          "50-59": 119,
+          "60-69": 119,
+          "70-79": 100,
+          "80-89": 8
+        },
+        "k_anonymity": 3
+      }
+    ],
+    "noniid": [
+      {
+        "hospital": "hospital_1",
+        "rows": 900,
+        "positives": 387,
+        "prevalence": 0.43,
+        "age_bands": {
+          "30-39": 182,
+          "40-49": 164,
+          "50-59": 189,
+          "60-69": 185,
+          "70-79": 163,
+          "80-89": 17
+        },
+        "k_anonymity": 8
+      },
+      {
+        "hospital": "hospital_2",
+        "rows": 539,
+        "positives": 313,
+        "prevalence": 0.5807050092764379,
+        "age_bands": {
+          "30-39": 124,
+          "40-49": 105,
+          "50-59": 105,
+          "60-69": 86,
+          "70-79": 106,
+          "80-89": 13
+        },
+        "k_anonymity": 6
+      },
+      {
+        "hospital": "hospital_3",
+        "rows": 359,
+        "positives": 210,
+        "prevalence": 0.584958217270195,
+        "age_bands": {
+          "30-39": 52,
+          "40-49": 73,
+          "50-59": 73,
+          "60-69": 82,
+          "70-79": 76,
+          "80-89": 3
+        },
+        "k_anonymity": 1
+      }
+    ]
+  },
+  "config": {
+    "quantity_skew": [
+      0.5,
+      0.3,
+      0.2
+    ],
+    "dirichlet_alpha": 1.0,
+    "split_seed": 42
+  }
+}

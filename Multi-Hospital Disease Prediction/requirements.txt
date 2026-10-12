@@ -1,0 +1,15 @@
+# Pinned versions used for every reported number (Python 3.14, Windows 11, CPU).
+# Install torch CPU first:  pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1
+flwr==1.39.0
+opacus==1.6.0
+numpy==2.5.4
+pandas==3.0.6
+scikit-learn==1.9.1
+scipy==1.18.1
+matplotlib==3.11.2
+fastapi==0.138.2
+uvicorn==0.49.0
+pydantic==2.14.1
+httpx==0.28.1
+pytest==9.1.1

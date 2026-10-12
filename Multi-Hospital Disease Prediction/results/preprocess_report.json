@@ -1,0 +1,31 @@
+{
+  "raw_rows": 3000,
+  "columns": [
+    "gender",
+    "age",
+    "smoking",
+    "yellow_fingers",
+    "anxiety",
+    "peer_pressure",
+    "chronic_disease",
+    "fatigue",
+    "allergy",
+    "wheezing",
+    "alcohol_consuming",
+    "coughing",
+    "shortness_of_breath",
+    "swallowing_difficulty",
+    "chest_pain",
+    "lung_cancer"
+  ],
+  "missing_values": 0,
+  "identifier_columns_dropped": [],
+  "duplicates_removed": 2,
+  "clean_rows": 2998,
+  "positives": 1517,
+  "prevalence": 0.5060040026684456,
+  "k_anonymity_pooled": 25,
+  "quasi_identifier_groups": 12,
+  "age_min": 30,
+  "age_max": 80
+}
