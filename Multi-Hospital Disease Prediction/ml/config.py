@@ -31,7 +31,7 @@ THRESHOLD = 0.5
 
 # differential privacy
 CLIP_NORM = 1.0
-SIGMAS = [0.3, 0.6, 1.0, 1.5, 2.0]
+SIGMAS = [0.5, 0.8, 1.0, 1.5, 2.0, 3.0]
 DELTA = 1e-5
 
 # secure aggregation
