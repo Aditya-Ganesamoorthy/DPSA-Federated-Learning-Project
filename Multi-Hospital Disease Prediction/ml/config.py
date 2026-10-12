@@ -35,4 +35,4 @@ SIGMAS = [0.3, 0.6, 1.0, 1.5, 2.0]
 DELTA = 1e-5
 
 # secure aggregation
-SECAGG_SCALE_BITS = 16
+SECAGG_SCALE_BITS = 20
