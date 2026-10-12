@@ -43,7 +43,7 @@ def comparison():
     ax.invert_yaxis()
     ax.set_xlabel("Test ROC-AUC (mean ± std over seeds)")
     ax.legend(loc="lower right", frameon=False)
-    ax.set_title("All methods sit inside the chance band: the label carries no learnable signal")
+    ax.set_title("All methods sit inside the chance band:\nthe label carries no learnable signal", fontsize=10)
     _save(fig, "comparison_auc.png")
 
 
@@ -79,7 +79,8 @@ def privacy_curve():
         nodp = [p for p in d if p["epsilon"] is None]
         if nodp:
             ax.axhline(nodp[0]["metrics"][key]["mean"], color=ORANGE, ls="--", lw=1.5, label="no DP")
-        ax.set_xlabel("ε (max over hospitals, δ=1e-5, 20 rounds)")
+        ax.set_xscale("log")
+        ax.set_xlabel("ε (log scale; max over hospitals, δ=1e-5, 20 rounds)")
         ax.set_ylabel(f"Test {key}")
     axes[0].legend(frameon=False)
     fig.suptitle("Privacy-utility trade-off (smaller ε = stronger privacy)")
@@ -98,7 +99,8 @@ def attack():
     ax.set_yticks(range(len(rows)), [r["label"] for r in rows])
     ax.invert_yaxis()
     ax.set_xlabel("Membership-inference AUC (0.5 = chance)")
-    ax.set_title("Attack succeeds on the overfit positive control, not on real models")
+    ax.set_title("Membership-inference leakage: centralized > FedAvg > FedAvg + DP\n"
+                 "(positive control shows the attack works; untrained model = chance)", fontsize=10)
     _save(fig, "attack.png")
 
 
@@ -113,7 +115,7 @@ def communication():
     for b, v in zip(bars, vals):
         ax.text(v, b.get_y() + b.get_height() / 2, f"  {v:.2f} MB", va="center", color=INK)
     ax.set_xlabel("Total data transferred (MB, both directions, 3 hospitals, 20 rounds)")
-    ax.set_title("Here FL moves MORE bytes than uploading the raw data once")
+    ax.set_title("Here FL moves MORE bytes than uploading the raw data once", fontsize=10)
     ax.set_xlim(0, max(vals) * 1.2)
     _save(fig, "communication.png")
 

@@ -44,8 +44,8 @@ export default function Communication() {
                 { key: 'local_epochs', label: 'Local epochs E', num: true },
                 { key: 'total_mb', label: 'Total MB', num: true, render: (r) => f2(r.total_mb) },
                 { key: 'wall', label: 'Wall s / round', num: true, render: (r) => f3(r.mean_wall_s_per_round) },
-                { key: 'conv', label: 'Rounds to loss convergence (10%)', num: true, render: (r) => r.rounds_to_loss_convergence_10pct ?? 'n/a' },
-                { key: 'tgt', label: `Rounds to AUC ≥ ${f3(d.target_auc)}`, num: true, render: (r) => r.rounds_to_95pct_of_centralized_auc ?? 'not reached' },
+                { key: 'conv', label: 'Rounds to loss within 10% of final', num: true, render: (r) => r.rounds_to_loss_convergence_10pct ?? 'n/a' },
+                { key: 'tgt', label: `Rounds to AUC ≥ ${f3(d.target_auc)}`, num: true, render: (r) => (r.rounds_to_95pct_of_centralized_auc === 0 ? 'round 0 (trivial: chance)' : r.rounds_to_95pct_of_centralized_auc ?? 'not reached') },
                 { key: 'auc', label: 'Final AUC', num: true, render: (r) => f3(r.final_test_auc) },
               ]} />
               <p className="lede" style={{ marginTop: 8 }}>{d.note}</p>

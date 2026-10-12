@@ -35,7 +35,7 @@ function Curves({ scenario, metric }) {
                 <Legend />
               </LineChart>
             </ChartCard>
-            <ChartCard title={`Global model on each hospital's own data (${metric === 'loss' ? 'AUC' : METRICS.find((m) => m[0] === metric)[1]})`}>
+            <ChartCard title={`Global model on each hospital's own TRAINING data (${metric === 'loss' ? 'AUC' : METRICS.find((m) => m[0] === metric)[1]}); rises because the model memorises it`}>
               <LineChart data={cdata}>
                 <CartesianGrid stroke="var(--grid)" />
                 <XAxis dataKey="round" /><YAxis domain={['auto', 'auto']} tickFormatter={f3} />

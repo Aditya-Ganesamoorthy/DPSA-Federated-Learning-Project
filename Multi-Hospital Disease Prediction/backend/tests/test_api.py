@@ -117,3 +117,10 @@ def test_missing_model_503(empty_client):
 def test_cors_allows_vite_origin(client):
     r = client.get("/api/v1/health", headers={"Origin": "http://localhost:5173"})
     assert r.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+
+def test_features_endpoint_matches_schema(client):
+    f = client.get("/api/v1/features").json()
+    names = [x["name"] for x in f["fields"]]
+    assert names == ["gender", "age", *schema.BINARY_FEATURES]
+    assert set(f["models"]) == {"centralized", "federated", "federated_dp"}

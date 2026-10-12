@@ -1,0 +1,50 @@
+{
+ "timestamp": "2026-10-13T00:51:14",
+ "python": "3.14.6",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "torch": "2.14.1+cpu",
+ "flwr": "1.39.0",
+ "opacus": "1.6.0",
+ "numpy": "2.5.4",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4
+ ],
+ "rounds": 20,
+ "hyperparameters": {
+  "lr": 0.05,
+  "momentum": 0.9,
+  "batch_size": 32,
+  "local_epochs": 2,
+  "hidden": [
+   32,
+   16
+  ],
+  "clip_norm": 1.0,
+  "sigmas": [
+   0.5,
+   0.8,
+   1.0,
+   1.5,
+   2.0,
+   3.0
+  ],
+  "delta": 1e-05,
+  "split_fractions": {
+   "train": 0.6,
+   "val": 0.1,
+   "test": 0.2,
+   "attack": 0.1
+  },
+  "quantity_skew": [
+   0.5,
+   0.3,
+   0.2
+  ],
+  "dirichlet_alpha": 1.0
+ },
+ "flower_mode": "in-process NumPyClient + flwr.server.strategy.FedAvg (no ray/gRPC)"
+}

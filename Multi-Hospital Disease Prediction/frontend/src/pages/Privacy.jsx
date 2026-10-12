@@ -1,6 +1,7 @@
 import { CartesianGrid, ErrorBar, Legend, Line, LineChart, ReferenceLine, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { useApi } from '../api'
 import { Async, ChartCard, DataTable, PageHeader, Tip } from '../components/ui'
+import DotPlot from '../components/DotPlot'
 import { eps, f3, pm } from '../format'
 
 const THREATS = [
@@ -46,7 +47,7 @@ export default function Privacy() {
                   <ChartCard key={k} title={`${l} vs ε (labels show σ; dashed = no DP)`}>
                     <ScatterChart>
                       <CartesianGrid stroke="var(--grid)" />
-                      <XAxis type="number" dataKey="eps" name="ε" scale="log" domain={['auto', 'auto']} label={{ value: 'ε (log scale)', position: 'insideBottom', offset: -2 }} />
+                      <XAxis type="number" dataKey="eps" name="ε" scale="log" domain={[2, 80]} ticks={[2, 5, 10, 20, 50]} tickFormatter={(v) => v} label={{ value: 'ε (log scale)', position: 'insideBottom', offset: -2 }} />
                       <YAxis type="number" dataKey="v" domain={[0.3, 0.7]} tickFormatter={f3} name={l} />
                       <Tooltip formatter={(v) => f3(v)} />
                       {base && <ReferenceLine y={base.metrics[k].mean} stroke="var(--s2)" strokeDasharray="5 4" />}
@@ -71,30 +72,25 @@ export default function Privacy() {
       <h3>Membership-inference attack</h3>
       <Async q={at} what="attack results">
         {(d) => {
-          const rows = [...d.models, d.positive_control, d.negative_control || d.untrained_control]
+          const rows = [...d.models, d.positive_control, d.untrained_control]
           return (
             <>
               <p className="lede">Loss-threshold attack. Members are training records; non-members come from a dedicated untouched hold-out; sets are balanced so AUC 0.5 = chance.</p>
-              <ChartCard title="Attack AUC by model (0.5 = chance)" height={Math.max(260, rows.length * 34)}>
-                <ScatterChart margin={{ left: 190 }}>
-                  <CartesianGrid stroke="var(--grid)" />
-                  <ReferenceLine x={0.5} stroke="var(--ink2)" label={{ value: 'chance', fill: 'var(--ink2)', fontSize: 12 }} />
-                  <XAxis type="number" dataKey="v" domain={[0.4, 1]} tickFormatter={f3} />
-                  <YAxis type="category" dataKey="label" width={190} interval={0} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => f3(v)} />
-                  <Scatter data={rows.map((r) => ({ label: r.label, v: r.auc.mean, sd: r.auc.std }))} fill="var(--s1)">
-                    <ErrorBar dataKey="sd" direction="x" stroke="var(--s1)" />
-                  </Scatter>
-                </ScatterChart>
-              </ChartCard>
+              <div className="card">
+                <h4>Attack AUC by model (± std; 0.5 = chance; orange squares = controls)</h4>
+                <DotPlot rows={rows.map((r) => ({ label: r.label, mean: r.auc.mean, std: r.auc.std, highlight: !!r.control }))}
+                         domain={[0.4, 1]} reference={0.5} xLabel="Membership-inference AUC" />
+              </div>
               <DataTable rows={rows} columns={[
                 { key: 'label', label: 'Target' },
                 { key: 'auc', label: 'Attack AUC', num: true, render: (r) => pm(r.auc) },
                 { key: 'best_accuracy', label: 'Best-threshold accuracy', num: true, render: (r) => f3(r.best_accuracy) },
               ]} />
               <div className="note ok">
-                The positive control (a deliberately overfit large MLP on 150 rows) shows the attack code works. Real models stay near 0.5 because a small,
-                lightly-overfit model on near-random labels leaks little through its loss. That is a result, not proof of safety: stronger attacks exist.
+                <b>Reading the result.</b> The positive control (a deliberately overfit large MLP on 150 rows, AUC {pm(d.positive_control.auc)}) shows the attack works,
+                and the untrained model sits at chance ({pm(d.untrained_control.auc)}). Real models do leak a little: the centralized MLP reaches {pm(d.models[0].auc)},
+                FedAvg {pm(d.models[1].auc)}, and DP pulls this back toward 0.5 as σ grows ({pm(d.models[2].auc)} at σ = {d.models[2].sigma} down to {pm(d.models[d.models.length - 1].auc)} at σ = {d.models[d.models.length - 1].sigma}).
+                These models memorise noise because the labels are random, which is the situation membership inference exploits; this is a loss-threshold attack only, so stronger attacks may do better.
               </div>
             </>
           )

@@ -51,7 +51,7 @@ export default function QA() {
         <ul>
           <li><b>Differential privacy (DP-SGD):</b> per-sample clipping + Gaussian noise. {dp && <>Across σ = {dp.map((p) => p.sigma).join(', ')} the per-hospital worst-case ε is {dp.map((p) => eps(p.epsilon)).join(', ')} (δ = {pc.delta}, {pc.rounds} rounds). The accountant persists across rounds; resetting it each round would under-report ε.</>}</li>
           <li><b>Secure aggregation:</b> pairwise masks mod 2³² cancel exactly. {sc && <>Integer sum difference: <b>{sc.integer_masked_sum_vs_plain_sum_max_abs_diff}</b>; a dropped client gives an error of {sc.dropout_float_error.toFixed(0)}, so it is detected.</>} It is a simulation, not a cryptographic protocol.</li>
-          <li><b>Attack evaluation:</b> {at && <>membership-inference AUC is {pm(at.models[0].auc)} for the centralized model and {pm(at.models[1].auc)} for FedAvg, versus {pm(at.positive_control.auc)} on the deliberately overfit positive control, which proves the attack works.</>}</li>
+          <li><b>Attack evaluation:</b> {at && <>membership-inference AUC is {pm(at.models[0].auc)} for the centralized model and {pm(at.models[1].auc)} for FedAvg, versus {pm(at.positive_control.auc)} on the deliberately overfit positive control (the attack works) and {pm(at.models[at.models.length - 1].auc)} with DP at σ = {at.models[at.models.length - 1].sigma}. Leakage falls from centralized to FedAvg to FedAvg + DP.</>}</li>
         </ul>
       </Answer>
 

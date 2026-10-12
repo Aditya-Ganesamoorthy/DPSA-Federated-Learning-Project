@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { CartesianGrid, ErrorBar, Line, LineChart, ReferenceArea, ReferenceLine, Scatter, ScatterChart, Tooltip, XAxis, YAxis, Legend } from 'recharts'
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis, Legend } from 'recharts'
 import { useApi } from '../api'
 import { Async, ChartCard, DataTable, PageHeader, Tip } from '../components/ui'
+import DotPlot from '../components/DotPlot'
 import { f3, pm } from '../format'
 
 const METRICS = [['auc', 'ROC-AUC'], ['recall', 'Recall'], ['accuracy', 'Accuracy'], ['f1', 'F1'], ['specificity', 'Specificity']]
@@ -74,19 +75,12 @@ export default function Comparison() {
                 Centralized training uses a matched budget of {d.matched_budget_epochs} epochs (= 20 rounds × 2 local epochs).
                 "Local-only" is each hospital training alone on its own rows.
               </p>
-              <ChartCard title={`${METRICS.find((m) => m[0] === metric)[1]} by method (± std)`} height={Math.max(260, rows.length * 34)}>
-                <ScatterChart margin={{ left: 150 }}>
-                  <CartesianGrid stroke="var(--grid)" />
-                  {metric === 'auc' && <ReferenceArea x1={0.5 - band} x2={0.5 + band} fill="var(--grid)" fillOpacity={0.6} />}
-                  <ReferenceLine x={0.5} stroke="var(--ink2)" />
-                  <XAxis type="number" dataKey="v" domain={[0.4, 0.6]} tickFormatter={f3} />
-                  <YAxis type="category" dataKey="label" width={150} interval={0} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => f3(v)} />
-                  <Scatter data={rows.map((m) => ({ label: m.label, v: m.metrics[metric].mean, sd: m.metrics[metric].std }))} fill="var(--s1)">
-                    <ErrorBar dataKey="sd" direction="x" stroke="var(--s1)" />
-                  </Scatter>
-                </ScatterChart>
-              </ChartCard>
+              <div className="card">
+                <h4>{METRICS.find((m) => m[0] === metric)[1]} by method (± std over seeds){metric === 'auc' ? '; shaded = 95% chance band' : ''}</h4>
+                <DotPlot rows={rows.map((m) => ({ label: m.label, mean: m.metrics[metric].mean, std: m.metrics[metric].std }))}
+                         domain={metric === 'auc' ? [0.44, 0.60] : [0.2, 0.9]} reference={metric === 'auc' ? 0.5 : 0.5}
+                         band={metric === 'auc' ? [0.5 - band, 0.5 + band] : null} xLabel={METRICS.find((m) => m[0] === metric)[1]} />
+              </div>
             </>
           )
         }}
