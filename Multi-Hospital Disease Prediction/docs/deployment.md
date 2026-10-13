@@ -12,7 +12,7 @@
 $env:HF_TOKEN="hf_xxx"
 python scripts/publish_to_hf.py            # uploads README (model card), global_model.npz, versions/global_v0.npz, config, history
 ```
-3. In the Render dashboard, open the service, **Environment**, and add `HF_TOKEN` with the same token. After the next restart the server publishes every new global version automatically (and restores the latest one when it wakes up).
+3. In the Render dashboard, open the service, **Environment**, and add `HF_TOKEN` with the same token (saving triggers a deploy). The server then publishes every new global version automatically and restores the latest one (model + history) when it restarts. This was verified live: after a real round the Hub showed `Global model v1 (FedAvg round)`, and a redeploy with a wiped disk came back at v1.
 
 Keep the token secret: never commit it, and revoke it at huggingface.co if it leaks.
 

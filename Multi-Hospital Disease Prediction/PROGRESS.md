@@ -27,15 +27,16 @@ Plan: [implementation_plan.md](implementation_plan.md). Environment: Python 3.14
 | Dashboard: login, live federation page (status, history, download, admin tools), Predict on the live global model | Done |
 | Torch-free server (numpy forward pass, verified vs torch 6e-8), Dockerfile, `requirements-server.txt`, `render.yaml` | Done |
 | Render deployment: https://fl-lung-cancer.onrender.com (free Docker service, Singapore) | **Live**; smoke test passes; real 2-hospital round v0 to v1 verified on it |
-| Hugging Face: model card, `scripts/publish_to_hf.py` (dry-run verified), server auto-publish + restore code | **Code done; upload NOT done**: needs the owner's HF write token (not available to the assistant) |
+| Hugging Face: primary model v0 + model card published to https://huggingface.co/Adhi-gg029/lung-cancer-federated-learning | **Done and verified** (public download returns v0, identical to local) |
+| Server auto-publish + restore (`HF_TOKEN` + `HF_REPO_ID` set on Render) | **Verified live**: a real 2-hospital round published v1 to the Hub by itself; after a redeploy (wiped disk) the server restored v1 and its history from the Hub. Then reset to clean v0. |
 
 Tests: 25 ML + 50 backend/federation = 75, all passing (`python -m pytest ml/tests backend/tests -q`).
 
-## What the owner still has to do (cannot be done without the owner's credentials)
-1. Create a Hugging Face **write** token and run `python scripts/publish_to_hf.py` (uploads v0, model card, config, history).
-2. Add `HF_TOKEN` in Render's Environment tab so each new global version is published automatically and restored after the free instance restarts.
-3. Create real hospital credentials in the dashboard (Live Federation, admin) and share them with each hospital.
-4. Rotate `ADMIN_PASSWORD` in Render if the initial one (shared in the chat) should not be kept.
+## What the owner still has to do
+1. Create real hospital credentials in the dashboard (Live Federation, admin) and share them with each hospital.
+2. Revoke the Hugging Face token that was pasted into the chat, create a fresh one, and update `HF_TOKEN` in Render (Environment, then Manual Deploy). The token file `Hugging face access token.txt` is git-ignored and was never committed.
+3. Rotate `ADMIN_PASSWORD` in Render if the initial one (shared in the chat) should not be kept.
+4. After pushing code, press Manual Deploy in Render (this service has no GitHub webhook).
 
 ## Key findings
 - **Dataset caveat:** the label is essentially unlearnable from the features (CV logistic AUC 0.501, random forest 0.523). All accuracy comparisons are within the 95% chance band (0.5 +/- 0.046). Reported honestly; the pipeline is validated on synthetic planted-signal labels (centralized 0.78, FedAvg 0.79-0.81, FedAvg + DP 0.80 AUC).
