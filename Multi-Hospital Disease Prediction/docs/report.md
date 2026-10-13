@@ -87,6 +87,25 @@ The model has 1,057 float32 parameters: 8.5 KB per hospital per round (upload + 
 ### 6.6 Pipeline validation on synthetic labels (not the real data)
 To show the pipeline can learn, we keep the real feature rows and hospital partitions but plant a signal in the labels (oracle AUC 0.83). Test AUC: centralized 0.778 ± 0.011; FedAvg IID 0.805 ± 0.004; FedAvg non-IID 0.794 ± 0.010; FedAvg + DP (σ = 1, ε = 14.3) 0.804 ± 0.007; FedAvg + SecAgg 0.794 ± 0.010 (3 seeds). Federated and federated + DP models are close to, and here slightly above, centralized (averaging and noise act as regularisation). So the near-chance real-data results come from the data, not from a pipeline bug.
 
+### 6.8 Optional extras: quantisation, FedProx, poisoning (3 seeds, `results/extras.json`)
+| Experiment | Real data AUC | Planted-signal AUC | Upload bytes (20 rounds, 3 hospitals) |
+|---|---|---|---|
+| FedAvg (reference) | 0.516 ± 0.008 | 0.794 ± 0.010 | 0.254 MB |
+| 8-bit update quantisation | 0.516 ± 0.006 | 0.795 ± 0.010 | 0.065 MB (26%) |
+| 4-bit update quantisation | 0.516 ± 0.005 | 0.795 ± 0.010 | 0.033 MB (13%) |
+| FedProx μ = 0.01 / 0.1 / 1.0 | 0.519 / 0.517 / 0.516 | 0.796 / **0.807 ± 0.005** / 0.781 ± 0.013 | unchanged |
+
+Quantising the update (delta) to 8 or even 4 bits cut upload traffic by 74% to 87% with no measurable accuracy change, which partly answers the communication problem of §6.5. FedProx changes nothing on the real data (everything is at chance); on planted-signal labels μ = 0.1 is about one standard deviation above FedAvg and μ = 1.0 is below it, so the effect is small and not conclusive.
+
+**Poisoning.** One hospital flips all its training labels (planted-signal labels, because the real labels contain no signal to corrupt):
+| Setting | FedAvg AUC | Median aggregation AUC |
+|---|---|---|
+| No attacker | 0.794 ± 0.010 | 0.800 ± 0.004 |
+| Hospital 3 (359 rows) poisons | 0.778 ± 0.011 | 0.792 ± 0.006 |
+| Hospital 1 (900 rows) poisons | **0.598 ± 0.036** | **0.799 ± 0.016** |
+
+A single large malicious hospital collapses FedAvg (0.794 to 0.598) because FedAvg weights it by its size; coordinate-wise median restores it (0.799) at no cost without an attacker. With only 3 hospitals the median tolerates one bad hospital, not two.
+
 ### 6.7 Threat model
 See `docs/threat_model.md`: raw-data exposure (mitigated by FL), membership inference (DP; measured), update inversion (SecAgg + DP; simulated), poisoning (not mitigated), dropout (SecAgg failure demonstrated), re-identification (k-anonymity measured; hospital 3 has k = 1).
 
@@ -97,8 +116,20 @@ See `docs/threat_model.md`: raw-data exposure (mitigated by FL), membership infe
 4. **Privacy and security techniques.** DP-SGD with persistent accounting (ε 2.9–69.6 across σ 3.0–0.5, δ = 1e-5), secure aggregation (exact cancellation, dropout detected), data minimisation and k-anonymity; evaluated with an attack that has a positive control.
 5. **Applications.** Healthcare: multi-hospital imaging/EHR models, for example the EXAM study predicting COVID-19 oxygen needs across 20 hospitals and the FeTS brain-tumour segmentation initiative. Finance: cross-bank fraud and anti-money-laundering detection without sharing customer transactions, credit scoring across institutions (US-UK PETs prize challenges targeted federated fraud detection). Consumer: keyboard prediction (Gboard).
 
+## 7b. Live federated system (deployment)
+Beyond the offline simulation, the project runs as a real client-server federation.
+
+* **Primary global model (v0)**: the FedAvg model trained across the three simulated hospitals, published on Hugging Face (`Adhi-gg029/lung-cancer-federated-learning`) with a model card that states plainly that it is at chance level.
+* **Coordinator (Render, free Docker service)**: FastAPI with stateless HMAC authentication (hospital passwords are derived from a server secret, so nothing sensitive is stored on the ephemeral disk), `GET /fl/model` (download the current version), `POST /fl/update` (upload weights + number of training rows built on a specific version), a FedAvg aggregator that builds version k+1 once `MIN_CLIENTS` hospitals have reported, versioned history with test metrics, and publication of each version to Hugging Face. It serves the dashboard from the same origin.
+* **Hospital client** (`python -m client.cli run --data my_hospital.csv`): downloads the model (from the server or Hugging Face), trains on the local CSV (optionally with DP-SGD and an accountant persisted on disk so ε composes across runs), reports before/after hold-out metrics locally, and uploads only the new weights and the row count.
+* **Safeguards**: login required (throttled after 5 failures), stale updates rejected (409), malformed/NaN/shape-mismatched updates rejected, L2 update-norm cap against diverged or poisoned updates, optional median aggregation, constant-time credential comparison, no request-body logging, revocation list.
+* **Server is torch-free**: it runs the numpy forward pass (verified equal to torch to 6e-8 and AUC identical to sklearn), so it fits Render's 512 MB free instance. Its FedAvg is the numpy implementation tested equal to Flower's.
+* **Verification**: 75 automated tests (including three simulated hospitals completing a round and the new model equalling the manual n_k/N average, concurrency, restart recovery and Hugging Face publish hooks), a real run of three client processes against a local server (v0 to v1), and a black-box smoke test of the deployed service (`scripts/smoke_server.py`).
+
+Honest limits: free-tier sleep and ephemeral disk (global model restored from Hugging Face only when a token is configured), updates are visible to the server (secure aggregation remains a simulation), and pending updates are lost on restart.
+
 ## 8. Limitations and future work
-Near-random synthetic-looking dataset (so accuracy claims are void); simulated, not cryptographic, secure aggregation; no poisoning defence (robust aggregation would be next); one simple attack; in-process Flower instead of a networked deployment; three hospitals and 1,798 training rows; Opacus noise is not from a secure RNG; not medically validated. Future: real clinical data, real key-agreement SecAgg with dropout recovery, shadow-model attacks, FedProx under stronger skew.
+Near-random synthetic-looking dataset (so accuracy claims are void); simulated, not cryptographic, secure aggregation; poisoning is only mitigated by an update-norm cap and an optional median aggregator (no anomaly detection); one simple attack; the experiments run Flower in-process and the live server uses its own numpy FedAvg over HTTPS rather than Flower's gRPC transport; the free Render tier sleeps and has an ephemeral disk; three simulated hospitals and 1,798 training rows; Opacus noise is not from a secure RNG; not medically validated. Future: real clinical data, real key-agreement SecAgg with dropout recovery, shadow-model attacks, FedProx under stronger skew.
 
 ## 9. Conclusion
 We built and verified an end-to-end federated pipeline (Flower, DP-SGD with correct cross-round accounting, simulated secure aggregation, membership inference with controls, communication analysis, API and dashboard). On this dataset the label carries no learnable signal, so accuracy cannot discriminate between methods; the informative findings are that federating and adding DP progressively reduce membership-inference leakage (0.624 → 0.558 → ~0.51), that secure aggregation is exact and fails detectably on dropout, and that FL costs more bytes than uploading this small dataset once.

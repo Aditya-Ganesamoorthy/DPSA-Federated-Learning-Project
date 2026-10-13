@@ -41,3 +41,17 @@ Rehearsal rule: every team member must be able to explain every module. Numbers 
 19. **Where are the hospital CSVs read, and why never by the server?** Only inside `HospitalClient` (`ml/federated.py`). The server code aggregates weights and evaluates on the shared test file, so no server path ever touches a hospital file; that is the federated trust boundary.
 
 20. **How would you defend against a malicious client?** We measured it: a hospital that flips all its labels hurts FedAvg, and coordinate-wise median aggregation recovers part of the loss (see `results/extras.json` and the report, section 6.8). Further options: update-norm clipping, trimmed mean/Krum, anomaly detection on updates, and secure aggregation combined with per-client clipping.
+
+## Live system questions (Hugging Face + Render + hospital clients)
+
+21. **Walk through what happens when a hospital joins.** The administrator creates credentials (derived from the server secret). The hospital logs in, downloads the current global model (version k) from the Render server or Hugging Face, trains on its own CSV with the client (rows never leave the machine, optional local DP), and uploads only the weights, its row count and the base version k. When `MIN_CLIENTS` hospitals have reported, the server computes `w_(k+1) = sum n_h/N * w_h`, evaluates it on the shared test file, saves version k+1 and publishes it to Hugging Face.
+
+22. **Why is the server numpy-only, and is it still correct?** Render's free instance has 512 MB RAM, and torch would not fit comfortably. The numpy forward pass matches torch to 6e-8 and the numpy AUC equals sklearn's; the numpy FedAvg is tested equal to Flower's `FedAvg`. Experiments still use Flower and torch.
+
+23. **How can login work on a free host whose disk is wiped?** Authentication is stateless: a hospital's password is `HMAC(SECRET_KEY, hospital id)`, and tokens are HMAC-signed with an expiry, so nothing has to be stored. The global model survives a restart only if `HF_TOKEN` is set (the server restores the latest version from Hugging Face); pending updates are lost and simply resubmitted.
+
+24. **What stops a hospital uploading garbage or an old update?** Only authenticated hospital accounts can upload; the update must be built on the current version (409 otherwise); shapes, finiteness and size are validated; an update farther than the L2 cap from the global model is rejected; and `AGGREGATOR=median` makes aggregation robust to a minority of bad updates (0.598 to 0.799 AUC under label flipping). A small, plausible bias under the cap would not be detected.
+
+25. **Is the live protocol private?** Raw data never leaves a hospital and traffic is HTTPS, but the server sees each hospital's weights; secure aggregation exists only as a simulation. Hospitals can add local DP (`--sigma`) with an accountant stored on disk so epsilon composes across their runs. The public `history.json` exposes hospital ids and row counts, so ids should be pseudonyms.
+
+26. **Why is the published model not useful clinically?** The dataset's label carries no learnable signal (CV AUC 0.50), so v0 and every later version score about 0.51 AUC. The model card says so. The deliverable is the federated, privacy-preserving process and its safeguards, not a diagnostic model.

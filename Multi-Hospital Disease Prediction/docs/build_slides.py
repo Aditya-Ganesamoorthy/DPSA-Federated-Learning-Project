@@ -41,7 +41,7 @@ def slide(title: str, bullets=None, image=None, image_w=7.4, notes: str = ""):
     return s
 
 
-cmp_, atk, comm, pc = J("comparison.json"), J("attack.json"), J("communication.json"), J("privacy_curve.json")
+cmp_, atk, comm, pc =J("comparison.json"), J("attack.json"), J("communication.json"), J("privacy_curve.json")
 m = {x["id"]: x["metrics"] for x in cmp_["methods"]}
 auc = lambda k: f"{m[k]['auc']['mean']:.3f}"
 e2 = next(e for e in comm["by_local_epochs"] if e["local_epochs"] == 2)
@@ -78,6 +78,12 @@ slide("Methods",
        "Secure aggregation: pairwise masks, integer arithmetic mod 2^32, exact cancellation (simulation)",
        "Membership inference: loss threshold, balanced sets, positive and negative controls",
        "Extras: FedProx, 8/4-bit update quantisation, label-flip poisoning with median defence"])
+slide("Live system: Hugging Face + Render + hospital clients",
+      ["Primary global model v0 (FedAvg over 3 simulated hospitals) published on Hugging Face (Adhi-gg029/lung-cancer-federated-learning)",
+       "Render server = coordinator: login, download model, upload weights, FedAvg into v(k+1), publish; also serves the dashboard",
+       "Hospital client: downloads the model, trains on its own CSV (never uploaded), optional local DP, uploads weights + row count",
+       "Safeguards: stateless HMAC auth + throttle, stale-update 409, shape/NaN checks, update-norm cap, optional median aggregation",
+       "Verified: 75 tests, 3 real client processes against a local server, and a live round on Render (v0 → v1)"])
 slide("Accuracy: no difference, because the data has no signal",
       [f"Centralized MLP AUC {auc('centralized_mlp')}", f"FedAvg IID {auc('fl_iid')} · non-IID {auc('fl_noniid')}",
        f"FedAvg + SecAgg {auc('fl_secagg')}", f"All inside the 95% chance band 0.5 ± {cmp_['chance_band_auc']:.3f}",
