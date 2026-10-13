@@ -22,7 +22,7 @@ Keep the token secret: never commit it, and revoke it at huggingface.co if it le
 | Runtime / plan | Docker / Free |
 | Repo / branch | `https://github.com/Aditya-Ganesamoorthy/DPSA-Federated-Learning-Project` / `main` |
 | Docker context / file | `Multi-Hospital Disease Prediction` / `Multi-Hospital Disease Prediction/Dockerfile` |
-| Auto-deploy | on commit |
+| Auto-deploy | Enabled, but **it did not fire** for this service: it was created from the public repo URL, so Render has no GitHub webhook. After pushing code, press **Manual Deploy → Deploy latest commit** in the Render dashboard (or connect the repo through Render's GitHub integration to get automatic deploys). A redeploy also resets the free instance's ephemeral state to v0 unless `HF_TOKEN` is configured. |
 | Health check | `/api/v1/health` |
 
 Environment variables are listed in the README (`SECRET_KEY`, `ADMIN_PASSWORD`, `MIN_CLIENTS`, `AGGREGATOR`, `HF_REPO_ID`, `HF_TOKEN`, ...). **`SECRET_KEY` must stay constant**: it signs sessions and derives every hospital's password. Changing it logs everyone out and invalidates all hospital passwords.
