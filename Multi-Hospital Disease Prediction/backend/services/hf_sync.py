@@ -7,7 +7,6 @@ published; never patient data.
 """
 from __future__ import annotations
 
-import io
 import logging
 import time
 from pathlib import Path
@@ -28,10 +27,10 @@ def publish(s: Settings, npz_bytes: bytes, history_json: str, version: int) -> d
         api = HfApi(token=s.hf_token)
         cfg = (config.MODELS_DIR / "model_config.json").read_bytes()
         ops = [
-            CommitOperationAdd("global_model.npz", io.BytesIO(npz_bytes)),
-            CommitOperationAdd(f"versions/global_v{version}.npz", io.BytesIO(npz_bytes)),
-            CommitOperationAdd("history.json", io.BytesIO(history_json.encode())),
-            CommitOperationAdd("model_config.json", io.BytesIO(cfg)),
+            CommitOperationAdd("global_model.npz", npz_bytes),
+            CommitOperationAdd(f"versions/global_v{version}.npz", npz_bytes),
+            CommitOperationAdd("history.json", history_json.encode()),
+            CommitOperationAdd("model_config.json", cfg),
         ]
         api.create_commit(repo_id=s.hf_repo_id, repo_type="model", operations=ops,
                           commit_message=f"Global model v{version} (FedAvg round)")
