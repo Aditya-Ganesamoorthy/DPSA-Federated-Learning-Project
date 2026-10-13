@@ -216,3 +216,9 @@ pre.code { margin: 8px 0; padding: 14px 16px; border-radius: var(--radius-sm); b
   .compare { grid-template-columns: 1fr; } .compare .h:nth-child(n+2) { display: none; }
   .bars .bar-row { grid-template-columns: 110px 1fr 54px; } .grid.two { grid-template-columns: 1fr; }
 }
+
+/* themed range slider */
+input[type=range] { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--gold2), var(--line)); outline-offset: 6px; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-d)); border: 3px solid #fff; box-shadow: 0 2px 6px rgba(92, 58, 20, .4); cursor: pointer; }
+input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--gold-d); border: 3px solid #fff; box-shadow: 0 2px 6px rgba(92, 58, 20, .4); cursor: pointer; }
+input[type=range]:disabled { opacity: .5; }
