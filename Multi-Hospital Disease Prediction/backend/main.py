@@ -13,10 +13,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
-from backend.routers import api, fl
+from backend.routers import api, fl, security
+from backend.services.accounts import AccountError, AccountStore
 from backend.services.auth import Auth, AuthError
 from backend.services.federation import Federation, FederationError
-from backend.services.predictor import Predictor
+from backend.services.security import SecurityLog
 from backend.services.store import ResultsMissing, Store
 from backend.settings import Settings
 
@@ -36,13 +37,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                        allow_headers=["Content-Type", "Authorization"], expose_headers=["X-Model-Version"])
     app.state.settings = s
     app.state.store = Store(s.results_dir)
-    app.state.auth = Auth(s)
-    app.state.federation = Federation(s)
-    app.state.predictor = Predictor(s.models_dir, app.state.federation)
+    app.state.security = SecurityLog(s.state_dir)
+    app.state.accounts = AccountStore(s)
+    app.state.auth = Auth(s, app.state.accounts, app.state.security)
+    app.state.federation = Federation(s, app.state.security)
     if s.ephemeral_secret:
         log.warning("SECRET_KEY is not set: using a random per-process key (logins reset on restart)")
     if not s.admin_password:
         log.warning("ADMIN_PASSWORD is not set: the admin account is disabled")
+    if not s.invite_code:
+        log.info("INVITE_CODE is not set: hospital registration is open")
 
     @app.exception_handler(ResultsMissing)
     async def _missing(_: Request, exc: ResultsMissing):
@@ -58,6 +62,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def _fed(_: Request, exc: FederationError):
         return _err(exc.status, "stale_update" if exc.status == 409 else "invalid_update", str(exc), **exc.extra)
 
+    @app.exception_handler(AccountError)
+    async def _acct(_: Request, exc: AccountError):
+        code = {403: "forbidden", 404: "not_found", 409: "conflict", 429: "too_many_requests"}.get(exc.status, "invalid_registration")
+        return _err(exc.status, code, str(exc))
+
     @app.exception_handler(HTTPException)
     async def _http(_: Request, exc: HTTPException):
         code = {404: "not_found", 503: "unavailable"}.get(exc.status_code, "http_error")
@@ -71,6 +80,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(api.router)
     app.include_router(fl.router)
+    app.include_router(security.router)
 
     dist = Path(s.frontend_dist) if s.frontend_dist else None
     if dist and (dist / "index.html").is_file():

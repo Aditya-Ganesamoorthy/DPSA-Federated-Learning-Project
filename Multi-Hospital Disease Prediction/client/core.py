@@ -48,11 +48,15 @@ def local_update(global_arrays: list[np.ndarray], X: np.ndarray, y: np.ndarray, 
     net = M.make_model("mlp", 0)
     M.set_parameters(net, global_arrays)
     before = eval_hold(net)
-    out = {"epsilon": None}
+    out = {"epsilon": None, "privacy": {"dp_enabled": False}}
     if sigma > 0:
         store = dp.AccountantStore.load(accountant_path) if accountant_path else dp.AccountantStore()
+        n_prior = len(store.history.get(hospital_id, []))
         dp.train_local_dp(net, Xtr, ytr, epochs, seed, sigma, store, hospital_id)
         out["epsilon"] = store.epsilon(hospital_id)
+        new = store.history[hospital_id][n_prior:]          # what THIS run released: (sigma, sample_rate, steps)
+        out["privacy"] = {"dp_enabled": True, "sigma": float(sigma), "sample_rate": float(new[0][1]),
+                          "steps": int(sum(e[2] for e in new))}
         if accountant_path:
             store.save(accountant_path)
     else:

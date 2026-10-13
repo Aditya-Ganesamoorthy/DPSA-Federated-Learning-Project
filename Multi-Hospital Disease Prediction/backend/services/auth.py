@@ -1,12 +1,10 @@
-"""Stateless authentication (stdlib only): survives restarts on Render's ephemeral free disk.
+"""Authentication (stdlib only).
 
-* Admin: ADMIN_USERNAME / ADMIN_PASSWORD from the environment.
-* Hospital credentials are DERIVED, not stored: password = base32(HMAC-SHA256(SECRET_KEY, "hospital:<id>"))[:20].
-  The admin creates a hospital through the API (or `python -m backend.manage`), which shows the generated
-  password. Only someone who holds it can log in; nothing secret sits in a database. Rotating SECRET_KEY revokes everyone;
-  REVOKED_HOSPITALS revokes a single hospital.
-* Access tokens: base64url(JSON payload) + "." + HMAC-SHA256 signature, with expiry.
-* Failed logins are throttled per username (in memory).
+* Administrator: ADMIN_USERNAME / ADMIN_PASSWORD from the environment (can suspend hospitals and force aggregation).
+* Hospitals: self-registered accounts (see accounts.py). They log in with their own username and password.
+* Access tokens: base64url(JSON payload) + "." + HMAC-SHA256 signature, with expiry. Suspending a hospital takes effect
+  immediately because every request re-checks the account status.
+* Failed logins are throttled per username (5 failures lock it for 60 s) and recorded as security events.
 """
 from __future__ import annotations
 
@@ -14,13 +12,13 @@ import base64
 import hashlib
 import hmac
 import json
-import re
 import time
 from dataclasses import dataclass
 
+from backend.services.accounts import AccountStore
+from backend.services.security import SecurityLog
 from backend.settings import Settings
 
-ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$")
 MAX_FAILS, LOCK_SECONDS = 5, 60
 
 
@@ -40,18 +38,6 @@ class User:
         return self.username if self.role == "hospital" else None
 
 
-RESERVED = {"admin", "root", "server", "system"}
-
-
-def slugify(name: str) -> str:
-    s = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:38]
-    if not ID_RE.match(s):
-        raise AuthError("Hospital name must contain at least 3 letters or digits", 422)
-    if s in RESERVED:
-        raise AuthError("That hospital name is reserved", 422)
-    return s
-
-
 def _b64(b: bytes) -> str:
     return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
 
@@ -61,36 +47,40 @@ def _unb64(s: str) -> bytes:
 
 
 class Auth:
-    def __init__(self, settings: Settings):
-        self.s = settings
+    def __init__(self, settings: Settings, accounts: AccountStore, log: SecurityLog):
+        self.s, self.accounts, self.log = settings, accounts, log
         self._fails: dict[str, list[float]] = {}
 
-    # ---- hospital credentials ----
-    def hospital_password(self, hospital_id: str) -> str:
-        mac = hmac.new(self.s.secret_key.encode(), f"hospital:{hospital_id}".encode(), hashlib.sha256).digest()
-        return base64.b32encode(mac).decode().rstrip("=")[:20].lower()
-
-    # ---- login ----
-    def _check_lock(self, username: str) -> None:
+    def _recent_fails(self, username: str) -> list[float]:
         now = time.time()
         recent = [t for t in self._fails.get(username, []) if now - t < LOCK_SECONDS]
         self._fails[username] = recent
-        if len(recent) >= MAX_FAILS:
-            raise AuthError(f"Too many failed attempts. Try again in {LOCK_SECONDS} seconds.", 429)
+        return recent
 
     def authenticate(self, username: str, password: str) -> User:
         username = (username or "").strip().lower()
-        self._check_lock(username)
+        if len(self._recent_fails(username)) >= MAX_FAILS:
+            self.log.add("login_blocked", username, "attempt while the account is temporarily locked")
+            raise AuthError(f"Too many failed attempts. Try again in {LOCK_SECONDS} seconds.", 429)
         user: User | None = None
-        if self.s.admin_password and username == self.s.admin_username.lower():
-            if hmac.compare_digest(password.encode(), self.s.admin_password.encode()):
+        suspended = False
+        if username == self.s.admin_username.lower():
+            if self.s.admin_password and hmac.compare_digest(password.encode(), self.s.admin_password.encode()):
                 user = User(username, "admin")
-        elif (ID_RE.match(username) and username != self.s.admin_username.lower()
-              and username not in self.s.revoked_hospitals):
-            if hmac.compare_digest(password.encode(), self.hospital_password(username).encode()):
+        else:
+            result = self.accounts.check(username, password)
+            if result == "ok":
                 user = User(username, "hospital")
+            suspended = result == "suspended"
+        if suspended:                       # correct password, but the administrator suspended this hospital
+            raise AuthError("This hospital account is suspended. Contact the network administrator.", 403)
         if user is None:
-            self._fails.setdefault(username, []).append(time.time())
+            fails = self._fails.setdefault(username, [])
+            fails.append(time.time())
+            if len(fails) == MAX_FAILS:
+                self.log.add("login_locked", username, f"{MAX_FAILS} failed logins in {LOCK_SECONDS}s: account locked")
+            else:
+                self.log.add("login_failed", username, "invalid username or password")
             raise AuthError("Invalid username or password")
         self._fails.pop(username, None)
         return user
@@ -111,8 +101,8 @@ class Auth:
             p = json.loads(_unb64(body))
             if p["exp"] < time.time():
                 raise AuthError("Session expired, please log in again")
-            if p["role"] == "hospital" and p["sub"] in self.s.revoked_hospitals:
-                raise AuthError("This hospital has been revoked")
+            if p["role"] == "hospital" and not self.accounts.is_active(p["sub"]):
+                raise AuthError("This hospital account is not active", 403)
             return User(p["sub"], p["role"])
         except AuthError:
             raise

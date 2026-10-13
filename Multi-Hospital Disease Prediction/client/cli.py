@@ -1,6 +1,7 @@
 """Hospital command line.
 
   set FL_SERVER=https://<your-render-app>.onrender.com   FL_USERNAME=<hospital-id>   FL_PASSWORD=<password>
+  python -m client.cli register --hospital-name "City General" --parent "State Health Network"   (one time; username/password from FL_USERNAME / FL_PASSWORD)
   python -m client.cli status
   python -m client.cli run --data my_hospital.csv [--epochs 2] [--sigma 0] [--holdout 0.2] [--source server|hf] [--dry-run]
 
@@ -29,6 +30,10 @@ def main(argv=None) -> int:
     ap.add_argument("--password", default=os.environ.get("FL_PASSWORD"))
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("status")
+    g = sub.add_parser("register")
+    g.add_argument("--hospital-name", required=True)
+    g.add_argument("--parent", default="", help="optional parent hospital / network (for sub-hospitals)")
+    g.add_argument("--invite-code", default=os.environ.get("FL_INVITE_CODE", ""))
     r = sub.add_parser("run")
     r.add_argument("--data", required=True, help="your hospital's local CSV")
     r.add_argument("--epochs", type=int, default=2)
@@ -46,6 +51,10 @@ def main(argv=None) -> int:
         return 2
     api = ServerAPI(a.server)
     try:
+        if a.cmd == "register":
+            r = api.register(a.hospital_name, a.username, a.password, a.parent, a.invite_code)
+            print(f"Registered hospital '{r['account']['name']}' as {r['username']}. You can now run: python -m client.cli run --data <csv>")
+            return 0
         who = api.login(a.username, a.password)
         print(f"Logged in as {who['username']} ({who['role']})")
         if a.cmd == "status":
@@ -72,7 +81,7 @@ def main(argv=None) -> int:
         if a.dry_run:
             print("Dry run: nothing uploaded.")
             return 0
-        out = api.submit(version, res["num_examples"], res["arrays"])
+        out = api.submit(version, res["num_examples"], res["arrays"], res["privacy"])
         if out["aggregated"]:
             print(f"Update accepted. Round complete: new global model v{out['new_version']}.")
         else:

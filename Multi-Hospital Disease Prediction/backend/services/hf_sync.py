@@ -52,3 +52,26 @@ def restore(s: Settings, state_dir: Path) -> bool:
     except Exception as e:
         log.info("HF restore skipped: %s", type(e).__name__)
         return False
+
+
+def publish_file(s: Settings, path_in_repo: str, data: bytes, message: str) -> dict:
+    """Commit one file (used for accounts.json: salted, server-peppered password verifiers, never plain passwords)."""
+    try:
+        from huggingface_hub import CommitOperationAdd, HfApi
+        HfApi(token=s.hf_token).create_commit(repo_id=s.hf_repo_id, repo_type="model", commit_message=message,
+                                              operations=[CommitOperationAdd(path_in_repo, data)])
+        return {"status": "ok"}
+    except Exception as e:
+        log.warning("HF publish_file failed: %s", type(e).__name__)
+        return {"status": "error", "error": type(e).__name__ + ": " + str(e)[:200]}
+
+
+def restore_file(s: Settings, name: str, dest: Path) -> bool:
+    try:
+        from huggingface_hub import hf_hub_download
+        p = hf_hub_download(s.hf_repo_id, name, repo_type="model", token=s.hf_token or None)
+        Path(dest).write_bytes(Path(p).read_bytes())
+        return True
+    except Exception as e:
+        log.info("HF restore of %s skipped: %s", name, type(e).__name__)
+        return False

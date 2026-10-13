@@ -27,9 +27,12 @@ class Settings:
     secret_key: str = field(default_factory=lambda: os.environ.get("SECRET_KEY", ""))
     admin_username: str = field(default_factory=lambda: os.environ.get("ADMIN_USERNAME", "admin"))
     admin_password: str = field(default_factory=lambda: os.environ.get("ADMIN_PASSWORD", ""))
-    revoked_hospitals: tuple[str, ...] = field(default_factory=lambda: tuple(
-        x.strip() for x in os.environ.get("REVOKED_HOSPITALS", "").split(",") if x.strip()))
     token_ttl_s: int = field(default_factory=lambda: _int("TOKEN_TTL_SECONDS", 8 * 3600))
+    # self-service hospital registration
+    invite_code: str = field(default_factory=lambda: os.environ.get("INVITE_CODE", ""))   # empty = open registration
+    max_accounts: int = field(default_factory=lambda: _int("MAX_ACCOUNTS", 200))
+    registrations_per_hour: int = field(default_factory=lambda: _int("REGISTRATIONS_PER_HOUR", 30))
+    pbkdf2_iterations: int = field(default_factory=lambda: _int("PBKDF2_ITERATIONS", 150_000))
     # federation
     min_clients: int = field(default_factory=lambda: _int("MIN_CLIENTS", 2))
     max_update_norm: float = field(default_factory=lambda: float(os.environ.get("MAX_UPDATE_NORM", "20")))
@@ -43,7 +46,7 @@ class Settings:
 
     def __post_init__(self):
         if not self.secret_key:
-            # Per-process random key: tokens and hospital passwords stop working on restart. Set SECRET_KEY in production.
+            # Per-process random key: tokens and stored password verifiers stop working on restart.
             self.secret_key = secrets.token_hex(32)
             self.ephemeral_secret = True
         else:

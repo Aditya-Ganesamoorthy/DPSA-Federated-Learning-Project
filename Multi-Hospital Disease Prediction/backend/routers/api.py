@@ -2,14 +2,9 @@ from __future__ import annotations
 
 import re
 
-import numpy as np
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
-from backend.schemas import DISCLAIMER, MODEL_NOTE, PredictRequest, PredictResponse
-from backend.routers.fl import current_user
-from backend.services.auth import User
-from backend.services.predictor import MODEL_CHOICES, ModelsMissing
-from ml import schema, secagg
+from ml import config, model_io, schema
 
 router = APIRouter(prefix="/api/v1")
 
@@ -22,19 +17,21 @@ def _store(request: Request):
 
 @router.get("/health")
 def health(request: Request):
-    store, pred = _store(request), request.app.state.predictor
-    return {"status": "ok", "results_loaded": store.all_loaded(), "models_loaded": pred.available(),
+    return {"status": "ok", "results_loaded": _store(request).all_loaded(),
             "global_model_version": request.app.state.federation.version}
 
 
 @router.get("/features")
 def features():
-    """Feature list the Predict form is generated from (single source of truth: ml/schema.py)."""
-    return {"fields": [
-        {"name": "gender", "type": "enum", "options": ["M", "F"]},
-        {"name": "age", "type": "int", "min": schema.AGE_RANGE[0], "max": schema.AGE_RANGE[1]},
-        *[{"name": c, "type": "bool"} for c in schema.BINARY_FEATURES]],
-        "models": list(MODEL_CHOICES)}
+    """Everything the in-browser trainer needs, from one source of truth (ml/schema.py and ml/config.py)."""
+    return {
+        "features": schema.FEATURES, "binary_features": schema.BINARY_FEATURES, "target": schema.TARGET,
+        "gender_map": schema.GENDER_MAP, "age_scale": schema.AGE_SCALE, "age_range": list(schema.AGE_RANGE),
+        "survey_codes": {"no": 1, "yes": 2}, "target_map": schema.TARGET_MAP,
+        "array_shapes": [list(s) for s in model_io.expected_shapes()],
+        "training": {"lr": config.LR, "momentum": config.MOMENTUM, "batch_size": config.BATCH_SIZE,
+                     "local_epochs": config.LOCAL_EPOCHS, "clip_norm": config.CLIP_NORM, "delta": 1e-5},
+        "limits": {"max_rows": 50_000, "max_file_mb": 8, "min_rows": 40}}
 
 
 @router.get("/meta")
@@ -53,6 +50,11 @@ def dataset_summary(request: Request):
 @router.get("/clients")
 def clients(request: Request):
     return _store(request).get("client_summary.json")["scenarios"]
+
+
+@router.get("/results/eda")
+def eda(request: Request):
+    return _store(request).get("eda.json")
 
 
 @router.get("/results/comparison")
@@ -88,48 +90,9 @@ def sanity(request: Request):
     return _store(request).get("sanity_planted_signal.json")
 
 
-@router.get("/results/secagg-check")
-def secagg_check(request: Request):
-    return _store(request).get("secagg_check.json")
-
-
 @router.get("/results/roc")
 def roc(request: Request, model: str = Query("federated", pattern=r"^[a-z_]{1,24}$")):
     store = _store(request)
     if model not in store.rocs():
         raise HTTPException(404, detail=f"Unknown model '{model}'. Available: {store.rocs()}")
     return store.get(f"roc_{model}.json")
-
-
-@router.get("/secagg/demo")
-def secagg_demo(seed: int = Query(0, ge=0, le=10_000), drop: int | None = Query(None, ge=0, le=2)):
-    """Cheap deterministic toy demo (no training): 3 hospitals, 4-number updates, pairwise masks."""
-    rng = np.random.default_rng(seed)
-    counts = [50, 30, 20]
-    updates = [np.round(rng.normal(size=4), 2) for _ in counts]
-    r = secagg.secure_weighted_average(updates, counts, base_seed=seed, drop=drop)
-    weights = [n / sum(counts) for n in counts]
-    return {
-        "counts": counts, "weights": weights, "modulus": "2^32", "fixed_point_bits": secagg.config.SECAGG_SCALE_BITS,
-        "updates": [u.tolist() for u in updates],
-        "masked": [[int(v) for v in m] for m in r["masked"]],
-        "dropped_client": drop,
-        "server_aggregate": [round(float(v), 6) for v in r["aggregate"]],
-        "plain_fedavg": [round(float(v), 6) for v in r["plain_float"]],
-        "max_abs_error": r["float_max_abs_error"],
-        "masks_cancelled": bool(r["int_max_abs_diff"] == 0),
-        "explanation": ("All masks cancel: the server learns only the weighted average." if drop is None else
-                        "A client dropped out, so its partners' masks are not cancelled and the aggregate is garbage. "
-                        "Real protocols recover with secret sharing."),
-    }
-
-
-@router.post("/predict", response_model=PredictResponse)
-def predict(req: PredictRequest, request: Request, user: User = Depends(current_user)):
-    # NOTE: request bodies are deliberately never logged.
-    pred = request.app.state.predictor
-    try:
-        out = pred.predict(req.model, req.patient.model_dump())
-    except ModelsMissing as e:
-        raise HTTPException(503, detail=str(e))
-    return PredictResponse(**out, model_used=req.model, disclaimer=DISCLAIMER, model_note=MODEL_NOTE)

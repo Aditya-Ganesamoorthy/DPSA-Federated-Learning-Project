@@ -1,47 +1,45 @@
 import json
 
-import numpy as np
 import pytest
-import torch
 from fastapi.testclient import TestClient
 
 from backend.main import create_app
-from backend.tests.conftest import hospital_headers, make_settings
-from ml import config, model as M, schema
-
-PATIENT = {"gender": "M", "age": 60, **{c: True for c in schema.BINARY_FEATURES}}
+from backend.tests.conftest import make_settings
+from ml import config, schema
 
 
 @pytest.fixture(scope="module", autouse=True)
 def results_ready():
     need = ["comparison.json", "privacy_curve.json", "attack.json", "communication.json", "run_meta.json",
-            "client_summary.json", "preprocess_report.json"]
+            "client_summary.json", "preprocess_report.json", "eda.json"]
     if not all((config.RESULTS_DIR / n).exists() for n in need):
-        pytest.skip("run `python -m ml.run_all` first")
-
-
-@pytest.fixture
-def auth(client, app):
-    return hospital_headers(client, app, "test-hospital-a")
+        pytest.skip("run `python -m ml.run_all` and `python -m ml.eda` first")
 
 
 def test_health(client):
     r = client.get("/api/v1/health").json()
-    assert r["status"] == "ok" and r["results_loaded"] and "global" in r["models_loaded"]
-    assert r["global_model_version"] == 0
+    assert r["status"] == "ok" and r["results_loaded"] and r["global_model_version"] == 0
 
 
 @pytest.mark.parametrize("path", ["/api/v1/meta", "/api/v1/dataset/summary", "/api/v1/clients", "/api/v1/features",
-                                  "/api/v1/results/comparison", "/api/v1/results/rounds?scenario=noniid",
-                                  "/api/v1/results/rounds?scenario=iid", "/api/v1/results/privacy-curve",
-                                  "/api/v1/results/attack", "/api/v1/results/communication",
-                                  "/api/v1/results/secagg-check", "/api/v1/results/sanity",
-                                  "/api/v1/results/roc?model=federated", "/api/v1/secagg/demo?seed=3"])
+                                  "/api/v1/results/eda", "/api/v1/results/comparison",
+                                  "/api/v1/results/rounds?scenario=noniid", "/api/v1/results/rounds?scenario=iid",
+                                  "/api/v1/results/privacy-curve", "/api/v1/results/attack",
+                                  "/api/v1/results/communication", "/api/v1/results/sanity",
+                                  "/api/v1/results/roc?model=federated", "/api/v1/security/overview",
+                                  "/api/v1/security/demo?seed=3"])
 def test_public_read_endpoints_ok_and_valid_json(client, path):
     r = client.get(path)
     assert r.status_code == 200, r.text
-    assert "NaN" not in r.text and "Infinity" not in r.text
-    json.loads(r.text)
+    def reject(const):                      # a numeric NaN/Infinity would be invalid JSON for browsers
+        raise ValueError(f"invalid JSON constant {const}")
+    json.loads(r.text, parse_constant=reject)
+
+
+def test_removed_endpoints_are_gone(client):
+    for method, path in [("get", "/api/v1/secagg/demo"), ("get", "/api/v1/results/secagg-check"),
+                         ("post", "/api/v1/predict")]:
+        assert getattr(client, method)(path).status_code in (404, 405)
 
 
 def test_privacy_curve_no_dp_is_null(client):
@@ -54,61 +52,21 @@ def test_rounds_scenario_allowlist(client):
     assert client.get("/api/v1/results/rounds?scenario=nope").json()["error"]["code"] == "not_found"
 
 
-def test_features_endpoint_matches_schema(client):
+def test_features_endpoint_drives_the_browser_trainer(client):
     f = client.get("/api/v1/features").json()
-    assert [x["name"] for x in f["fields"]] == ["gender", "age", *schema.BINARY_FEATURES]
-    assert set(f["models"]) == {"global", "centralized", "federated", "federated_dp"}
+    assert f["features"] == schema.FEATURES and f["binary_features"] == schema.BINARY_FEATURES
+    assert f["array_shapes"] == [[32, 15], [32], [16, 32], [16], [1, 16], [1]]
+    assert f["gender_map"] == {"F": 0, "M": 1} and f["age_scale"] == 100 and f["survey_codes"] == {"no": 1, "yes": 2}
+    assert f["training"]["clip_norm"] == config.CLIP_NORM and f["training"]["batch_size"] == config.BATCH_SIZE
 
 
-def test_secagg_demo_cancels_and_dropout_fails(client):
-    ok = client.get("/api/v1/secagg/demo?seed=1").json()
-    assert ok["masks_cancelled"] and ok["max_abs_error"] < 1e-4
-    bad = client.get("/api/v1/secagg/demo?seed=1&drop=1").json()
-    assert not bad["masks_cancelled"] and bad["max_abs_error"] > 1
-    assert client.get("/api/v1/secagg/demo?seed=1").json() == ok
-
-
-@pytest.mark.parametrize("model", ["global", "centralized", "federated", "federated_dp"])
-def test_predict_range_and_disclaimer(client, auth, model):
-    r = client.post("/api/v1/predict", json={"model": model, "patient": PATIENT}, headers=auth)
-    assert r.status_code == 200, r.text
-    b = r.json()
-    assert 0 <= b["probability"] <= 1 and b["label"] in (0, 1) and "not medical advice" in b["disclaimer"]
-
-
-def test_predict_requires_login(client):
-    r = client.post("/api/v1/predict", json={"model": "global", "patient": PATIENT})
-    assert r.status_code == 401 and r.json()["error"]["code"] == "unauthorized"
-
-
-@pytest.mark.parametrize("bad", [
-    {"model": "federated", "patient": {**PATIENT, "age": 500}},
-    {"model": "federated", "patient": {**PATIENT, "extra": 1}},
-    {"model": "nope", "patient": PATIENT},
-    {"model": "federated", "patient": {k: v for k, v in PATIENT.items() if k != "smoking"}},
-    {"model": "federated", "patient": {**PATIENT, "gender": "X"}},
-])
-def test_predict_validation_422(client, auth, bad):
-    r = client.post("/api/v1/predict", json=bad, headers=auth)
-    assert r.status_code == 422
-    assert r.json()["error"]["code"] == "validation_error" and r.json()["error"]["fields"]
-
-
-def test_serving_parity_with_training_pipeline(client, auth):
-    """API (numpy) prediction == training-time (torch) pipeline prediction on the same raw rows."""
-    from ml import preprocess
-    raw = preprocess.load_raw().drop_duplicates().reset_index(drop=True)
-    net = M.make_model("mlp", 0)
-    net.load_state_dict(torch.load(config.MODELS_DIR / "federated.pt", weights_only=True))
-    enc = schema.encode_frame(raw.head(10))
-    for i in range(10):
-        row = raw.iloc[i]
-        patient = {"gender": row["gender"], "age": int(row["age"]),
-                   **{c: int(row[c]) == 2 for c in schema.BINARY_FEATURES}}
-        api = client.post("/api/v1/predict", json={"model": "federated", "patient": patient},
-                          headers=auth).json()["probability"]
-        train = float(M.predict_proba(net, enc.iloc[[i]][schema.FEATURES].to_numpy(np.float32))[0])
-        assert abs(api - train) < 1e-5
+def test_eda_is_aggregate_only_and_consistent(client):
+    e = client.get("/api/v1/results/eda").json()
+    assert e["rows"] == e["positives"] + e["negatives"] and 0.4 < e["prevalence"] < 0.6
+    assert len(e["features"]) == 14 and e["max_abs_correlation"] < 0.1
+    assert sum(e["age"]["histogram"]["positive"]) + sum(e["age"]["histogram"]["negative"]) == e["rows"]
+    names = e["correlation_matrix"]["names"]
+    assert len(e["correlation_matrix"]["values"]) == len(names) == 16
 
 
 def test_missing_results_return_503_not_stack_trace(tmp_path):

@@ -35,6 +35,15 @@ class ServerAPI:
             raise ApiError(r.status_code, msg, body)
         return r
 
+    def register(self, hospital_name: str, username: str, password: str, parent_network: str = "",
+                 invite_code: str = "") -> dict:
+        """Self-service sign-up for a hospital / sub-hospital. Logs the new account in."""
+        data = self._call("POST", "/auth/register", json={
+            "hospital_name": hospital_name, "parent_network": parent_network, "username": username,
+            "password": password, "invite_code": invite_code}).json()
+        self.token = data["access_token"]
+        return data
+
     def login(self, username: str, password: str) -> dict:
         data = self._call("POST", "/auth/login", json={"username": username, "password": password}).json()
         self.token = data["access_token"]
@@ -48,10 +57,12 @@ class ServerAPI:
         arrays, version = model_io.from_bytes(r.content)
         return arrays, int(r.headers.get("X-Model-Version", version))
 
-    def submit(self, base_version: int, num_examples: int, arrays: list[np.ndarray]) -> dict:
+    def submit(self, base_version: int, num_examples: int, arrays: list[np.ndarray], privacy: dict | None = None) -> dict:
         b64 = base64.b64encode(model_io.to_bytes(arrays, base_version)).decode()
-        return self._call("POST", "/fl/update", json={"base_version": base_version,
-                                                      "num_examples": num_examples, "npz_b64": b64}).json()
+        body = {"base_version": base_version, "num_examples": num_examples, "npz_b64": b64}
+        if privacy:
+            body["privacy"] = privacy
+        return self._call("POST", "/fl/update", json=body).json()
 
 
 def download_from_hf(repo_id: str) -> tuple[list[np.ndarray], int]:
