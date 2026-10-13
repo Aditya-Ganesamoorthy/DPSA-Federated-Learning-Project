@@ -82,8 +82,10 @@ slide("Live system: Hugging Face + Render + hospital clients",
       ["Primary global model v0 (FedAvg over 3 simulated hospitals) published on Hugging Face (Adhi-gg029/lung-cancer-federated-learning)",
        "Render server = coordinator: login, download model, upload weights, FedAvg into v(k+1), publish; also serves the dashboard",
        "Hospital client: downloads the model, trains on its own CSV (never uploaded), optional local DP, uploads weights + row count",
-       "Safeguards: stateless HMAC auth + throttle, stale-update 409, shape/NaN checks, update-norm cap, optional median aggregation",
-       "Verified: 75 tests, 3 real client processes against a local server, and a live round on Render (v0 → v1)"])
+       "Hospitals and sub-hospitals register themselves; hashed passwords, login throttle, stale-update 409, shape/NaN checks, update-size guard, optional median aggregation",
+       "Dashboard: security of every round, raw data never leaves, DP status, attacks and risk score, ordinary-vs-protected demo, EDA",
+       "Train & Contribute: upload a CSV batch, train in the browser (optional DP), watch the round animate through to the Hugging Face update",
+       "Verified: 99 tests, a real-browser end-to-end round with two hospitals, and a black-box smoke test of the deployment"])
 slide("Accuracy: no difference, because the data has no signal",
       [f"Centralized MLP AUC {auc('centralized_mlp')}", f"FedAvg IID {auc('fl_iid')} · non-IID {auc('fl_noniid')}",
        f"FedAvg + SecAgg {auc('fl_secagg')}", f"All inside the 95% chance band 0.5 ± {cmp_['chance_band_auc']:.3f}",

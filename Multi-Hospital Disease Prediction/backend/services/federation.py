@@ -198,6 +198,14 @@ class Federation:
             return out
 
     # ---- write API ----
+    def discard_pending(self, hospital_id: str) -> bool:
+        """Drop a removed hospital's not-yet-aggregated update (its DP releases stay counted in the round record)."""
+        with self.lock:
+            old = self.pending.pop(hospital_id, None)
+            if old and (old["privacy"] or {}).get("dp_enabled"):
+                self.round["extra_dp"].setdefault(hospital_id, []).append(old["privacy"])
+            return old is not None
+
     def reject(self, hospital_id: str, reason: str, detail: str, privacy: dict | None = None) -> None:
         with self.lock:
             try:

@@ -54,10 +54,10 @@ def predict_proba(x):                      # x: (n, 15) float32 in the feature o
 ```
 
 ## Take part as a hospital (federated update)
-1. Get credentials from the project administrator.
-2. Clone the project repository and run, on your own machine (your CSV never leaves it):
+1. Register your hospital (or sub-hospital) yourself on the project's server, in the dashboard (*Register hospital*) or with `python -m client.cli register`.
+2. Either open **Train & Contribute** in the dashboard (the CSV is trained on inside your browser), or clone the project repository and run, on your own machine (your CSV never leaves it):
 ```
-set FL_SERVER=<server url>  &  set FL_USERNAME=<hospital-id>  &  set FL_PASSWORD=<password>
+set FL_SERVER=<server url>  &  set FL_USERNAME=<username>  &  set FL_PASSWORD=<password>
 python -m client.cli run --data my_hospital.csv --epochs 2 --source hf
 ```
 `--source hf` downloads this model; the update is uploaded to the coordinator server, which publishes the next version here.
@@ -68,7 +68,7 @@ Add `--sigma 1.0` for local differential privacy (DP-SGD with a persistent priva
 * Optional record-level differential privacy on the client. Reference results (6 noise levels): ε 2.9 to 69.6 at δ = 1e-5.
 * The coordinator authenticates hospitals, rejects stale or malformed updates, caps update norm, and can use median aggregation
   against poisoned updates. Secure aggregation is only *simulated* in this project (see the project report).
-* `history.json` lists pseudonymous hospital ids: use ids that do not reveal the institution.
+* `history.json` and `accounts.json` list hospital usernames and names. `accounts.json` holds only salted, server-peppered password verifiers (never passwords). Use pseudonymous usernames.
 
 ## Limitations
 Near-random, survey-style dataset; tiny model; 600-row evaluation set (95% chance band for AUC is ±0.046); not clinically validated.

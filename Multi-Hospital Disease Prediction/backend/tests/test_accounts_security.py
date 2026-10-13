@@ -123,6 +123,23 @@ def test_admin_can_suspend_and_restore_and_it_applies_immediately(app, client, a
     assert client.post("/api/v1/admin/hospitals/nobody-here/suspend", headers=admin_headers).status_code == 404
 
 
+def test_admin_can_remove_a_hospital_and_its_pending_update(app, client, admin_headers):
+    from client.api import ServerAPI
+    api = ServerAPI("http://testserver", http=TestClient(app))
+    api.register("Temp Hospital", "temp-hospital", PW)
+    base, _ = api.download_model()
+    api.submit(0, 20, [x + 0.01 for x in base])
+    assert app.state.federation.status()["pending_hospitals"] == ["temp-hospital"]
+    assert client.delete("/api/v1/admin/hospitals/temp-hospital", headers=admin_headers).json() == {"removed": "temp-hospital"}
+    assert app.state.federation.status()["pending_hospitals"] == []
+    assert client.post("/api/v1/auth/login", json={"username": "temp-hospital", "password": PW}).status_code == 401
+    assert client.get("/api/v1/fl/status", headers={"Authorization": f"Bearer {api.token}"}).status_code == 403
+    assert client.delete("/api/v1/admin/hospitals/temp-hospital", headers=admin_headers).status_code == 404
+    assert register(client, "temp-hospital").status_code == 201                      # the name can be registered again
+    h = hospital_headers(client, app, "someone-else")
+    assert client.delete("/api/v1/admin/hospitals/someone-else", headers=h).status_code == 403
+
+
 def test_role_separation(app, client, admin_headers):
     h = hospital_headers(client, app, "plain-user")
     assert client.post("/api/v1/admin/aggregate", headers=h).status_code == 403

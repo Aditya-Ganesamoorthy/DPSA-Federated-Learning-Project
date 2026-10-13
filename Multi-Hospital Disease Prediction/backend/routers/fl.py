@@ -204,6 +204,16 @@ def suspend(username: str, admin: User = Depends(admin_user), accounts: AccountS
     return acc
 
 
+@router.delete("/admin/hospitals/{username}")
+def remove_hospital(username: str, admin: User = Depends(admin_user), accounts: AccountStore = Depends(get_accounts),
+                    fed: Federation = Depends(get_fed), log: SecurityLog = Depends(get_log)):
+    uid = username.lower()
+    accounts.remove(uid)
+    fed.discard_pending(uid)
+    log.add("hospital_removed", uid, "account removed by the administrator")
+    return {"removed": uid}
+
+
 @router.post("/admin/hospitals/{username}/restore")
 def restore(username: str, admin: User = Depends(admin_user), accounts: AccountStore = Depends(get_accounts),
             log: SecurityLog = Depends(get_log)):

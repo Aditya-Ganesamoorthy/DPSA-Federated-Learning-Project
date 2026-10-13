@@ -33,6 +33,11 @@ export default function App() {
   const ctx = useMemo(() => ({ user, setUser, logout: () => { logoutRequest(); setUser(null) } }), [user])
 
   useEffect(() => {
+    const id = setInterval(() => { if (!document.hidden) health.retry() }, 15000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
     const out = () => setUser(null)
     window.addEventListener('fl-logout', out)
     return () => window.removeEventListener('fl-logout', out)

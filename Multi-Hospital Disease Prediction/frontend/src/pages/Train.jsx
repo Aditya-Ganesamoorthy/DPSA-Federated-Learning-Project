@@ -227,10 +227,13 @@ function Trainer({ spec }) {
       {(run.curve.length > 0 || r) && (
         <div className="grid two" style={{ marginTop: 16 }}>
           {run.curve.length > 0 && (
+            <div>
             <ChartCard title="Local training loss by epoch" height={220}>
               <LineChart data={run.curve}><CartesianGrid stroke="var(--grid)" /><XAxis dataKey="epoch" /><YAxis domain={['auto', 'auto']} /><Tooltip />
                 <Line dataKey="loss" stroke="var(--s1)" strokeWidth={3} dot={{ r: 4 }} isAnimationActive /></LineChart>
             </ChartCard>
+            <div className="small muted" style={{ marginTop: 8 }}>On this dataset the diagnosis is almost unrelated to the features, so the loss hovers around 0.69 (a coin flip) instead of falling steadily.</div>
+            </div>
           )}
           {r && (
             <div className="card">

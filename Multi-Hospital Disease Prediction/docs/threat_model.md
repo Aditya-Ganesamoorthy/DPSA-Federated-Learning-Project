@@ -17,13 +17,14 @@ Trust assumptions: the server is *honest-but-curious* (follows the protocol, tri
 | Threat | Adversary | Mitigation | Residual risk |
 |---|---|---|---|
 | Unauthorised upload/download | Internet attacker | HMAC-signed, expiring bearer tokens; hospital-only and admin-only routes | Stolen token valid until expiry (8 h default) |
-| Credential guessing | Internet attacker | 20-character derived passwords; 5 failures lock a username for 60 s; constant-time comparison | Throttle is per process and in memory |
+| Credential guessing | Internet attacker | Salted PBKDF2 + server-peppered verifiers; 5 failures lock a username for 60 s (logged as a brute-force attempt); constant-time comparison; 8+ character passwords | Throttle is per process and in memory; users may still choose weak passwords |
+| Fake or malicious hospitals (open self-registration) | Anyone on the internet | Optional `INVITE_CODE`; sign-up rate limit and account cap; every update is validated, size-guarded and logged; optional median aggregation; the administrator can suspend or remove an account | With open registration an attacker can create accounts: poisoning is limited to what the size guard and median aggregation allow |
 | Stale / replayed update | Honest client or replayer | Updates carry the base version; anything not built on the current version gets 409 | A replay of a still-current update just replaces that hospital's pending update |
 | Poisoned or diverged update | Compromised hospital | L2 norm cap; optional median aggregator (measured: 0.598 to 0.799 AUC under label flipping) | Needs 3+ hospitals; an attacker staying under the norm cap with a small bias is not detected |
 | Malformed payload / parser abuse | Attacker | `np.load(allow_pickle=False)`, shape and finiteness checks, 200 KB request cap | none known |
 | Server sees individual updates | Honest-but-curious operator | Optional client-side DP (`--sigma`); secure aggregation only simulated | Updates are visible to the server |
 | Data in transit | Network attacker | Render HTTPS | Terminates at Render's edge |
-| Secret leakage | Anyone with repo access | `SECRET_KEY`, `ADMIN_PASSWORD`, `HF_TOKEN` only in Render's environment, never in git | Rotating `SECRET_KEY` invalidates all hospital passwords |
+| Secret leakage | Anyone with repo access | `SECRET_KEY`, `ADMIN_PASSWORD`, `HF_TOKEN` only in Render's environment, never in git | Rotating `SECRET_KEY` invalidates all hospital passwords and sessions |
 | Hospital identity in public history | Public | Use pseudonymous hospital ids (documented) | Ids and row counts are public in `history.json` |
 
 ## DP guarantee, stated precisely

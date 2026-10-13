@@ -43,7 +43,7 @@ export default function FlowAnimation({ phase = 'idle', progress = 0, loss = nul
   return (
     <div>
       <svg className="flow" viewBox="0 0 920 300" role="img" aria-label={`Federated learning animation: ${PHASE_TEXT[phase]}`}
-           style={compact ? { maxHeight: 230 } : undefined}>
+           >
         <defs>
           <linearGradient id="goldg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#f0c14b" /><stop offset="1" stopColor="#b9780f" /></linearGradient>
           <linearGradient id="brownc" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#7a4d18" /><stop offset="1" stopColor="#4a2d0f" /></linearGradient>
@@ -90,11 +90,13 @@ export default function FlowAnimation({ phase = 'idle', progress = 0, loss = nul
           </g>
           <text x="150" y="190" fontSize="12.5" fontWeight="700" textAnchor="middle" fill="var(--brown)">{youLabel.length > 22 ? youLabel.slice(0, 21) + '…' : youLabel}</text>
           {/* lock badge: data stays here */}
-          <g transform="translate(196 104)" className={training ? 'pulse' : ''}>
-            <circle r="15" fill="#fff" stroke="var(--good)" strokeWidth="2" />
-            <path d="M-5 0v-3a5 5 0 0110 0v3M-7 0h14v9h-14z" fill="var(--good-bg)" stroke="var(--good)" strokeWidth="2" strokeLinejoin="round" />
+          <g transform="translate(196 104)">
+            <g className={training ? 'pulse' : ''}>
+              <circle r="15" fill="#fff" stroke="var(--good)" strokeWidth="2" />
+              <path d="M-5 0v-3a5 5 0 0110 0v3M-7 0h14v9h-14z" fill="var(--good-bg)" stroke="var(--good)" strokeWidth="2" strokeLinejoin="round" />
+            </g>
           </g>
-          <text x="150" y="226" fontSize="11" textAnchor="middle" fill={training ? 'var(--good)' : 'var(--ink3)'} fontWeight={training ? 700 : 400}>
+          <text x="150" y="246" fontSize="12" textAnchor="middle" fill={training ? 'var(--good)' : 'var(--ink3)'} fontWeight={training ? 700 : 400}>
             {training ? `data stays local${loss != null ? ` · loss ${loss.toFixed(3)}` : ''}` : 'patient data stays here'}
           </text>
         </g>
@@ -106,9 +108,11 @@ export default function FlowAnimation({ phase = 'idle', progress = 0, loss = nul
           <circle cx="460" cy="150" r="46" fill="none" stroke="url(#goldg)" strokeWidth="7" strokeLinecap="round" strokeDasharray={ringC}
                   strokeDashoffset={ringC * (1 - frac)} transform="rotate(-90 460 150)" style={{ transition: 'stroke-dashoffset .5s' }} />
           {(phase === 'aggregating') && <circle cx="460" cy="150" r="74" fill="none" stroke="var(--gold2)" strokeWidth="2" className="glow" />}
-          <g transform="translate(460 150)" className={phase === 'aggregating' ? 'spin' : ''} fill="#ffeec2">
-            <circle r="13" fill="none" stroke="#ffeec2" strokeWidth="3.4" /><circle r="4.5" />
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => <rect key={a} x="-3" y="-21" width="6" height="8" rx="1.5" transform={`rotate(${a})`} />)}
+          <g transform="translate(460 150)">
+            <g className={phase === 'aggregating' ? 'spin' : ''} fill="#ffeec2">
+              <circle r="13" fill="none" stroke="#ffeec2" strokeWidth="3.4" /><circle r="4.5" />
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => <rect key={a} x="-3" y="-21" width="6" height="8" rx="1.5" transform={`rotate(${a})`} />)}
+            </g>
           </g>
           <text x="460" y="236" fontSize="12.5" fontWeight="700" textAnchor="middle" fill="var(--brown)">Federated server</text>
           <text x="460" y="252" fontSize="11" textAnchor="middle" fill="var(--ink3)">
@@ -122,7 +126,7 @@ export default function FlowAnimation({ phase = 'idle', progress = 0, loss = nul
           {phase === 'publishing' && <circle cx="796" cy="150" r="72" fill="none" stroke="var(--s2)" strokeWidth="2" className="glow" />}
           <path d="M770 160a16 16 0 01-1-31 22 22 0 0142-4 15 15 0 01-1 35z" fill="#e5eef7" stroke="var(--s2)" strokeWidth="2.4" strokeLinejoin="round" />
           {phase === 'done' && hfStatus !== 'error' && (
-            <g className="ok" transform="translate(822 112)"><circle r="14" fill="var(--good)" /><path d="M-6 0l4 4 8-8" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></g>
+            <g transform="translate(822 112)"><g className="ok"><circle r="14" fill="var(--good)" /><path d="M-6 0l4 4 8-8" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></g></g>
           )}
           <text x="796" y="190" fontSize="12.5" fontWeight="700" textAnchor="middle" fill="var(--brown)">Hugging Face</text>
           <text x="796" y="236" fontSize="11" textAnchor="middle" fill={hfTone} fontWeight="600">

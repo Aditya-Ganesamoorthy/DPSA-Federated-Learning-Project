@@ -52,3 +52,20 @@ Tests: 25 ML + 50 backend/federation = 75, all passing (`python -m pytest ml/tes
 - Secure aggregation stays a simulation; the live protocol shows updates to the server (mitigations: local DP option, HTTPS, norm cap, median).
 - The Render free tier sleeps when idle and has an ephemeral disk; the global model persists across restarts only once `HF_TOKEN` is configured.
 - Not done: re-running the whole 1-hour experiment pipeline from a fresh clone (the 55 tests do pass in a fresh clone and a seed-0 rerun reproduces stored results bit-for-bit).
+
+## Change request 2 (UI/product redesign), all implemented
+| # | Request | Status |
+|---|---|---|
+| 1 | Overview = Security & Privacy Analysis Dashboard + EDA + number of participants | Done: round-by-round security table, raw-data-egress card, DP status, received/accepted/rejected, attacks, risk scores, security events, controls, EDA charts |
+| 1b | Demo: ordinary FL vs protected session | Done: side-by-side table, animated attacker-impact bars, risk rings (`/security/demo`) |
+| 2 | Refine Live Federation | Done: animated round view, participants table (parent/sub-hospital, DP epsilon, accepted/rejected), history with risk, admin suspend/restore/remove |
+| 3 | Remove Q&A and Secure Aggregation pages | Done (pages, API routes and tests removed; `ml/secagg.py` stays as research code) |
+| 4 | Upload a batch, train, update the model on Hugging Face (no predict) | Done: Train & Contribute trains in the browser (data never leaves), optional DP, uploads weights; the server aggregates and publishes to Hugging Face |
+| 5 | Visual animation while FL runs and the model updates | Done: download, local training (progress ring), upload, waiting, aggregation, publish, done |
+| 6 | Sub-hospital login/registration (not admin-only) | Done: hospitals and sub-hospitals register themselves; optional invite code; rate limit and cap; admin can suspend/remove |
+| 7 | Attractive light golden-brown UI | Done: new design system |
+
+Verification: 99 tests (41 ML + 58 backend, including JS-vs-PyTorch parity), a real-browser end-to-end test (two hospitals register, train, one with DP, complete a round, 21 checks), a 40-check smoke test, and a simulated container with only `requirements-server.txt` (server uses about 100 MB).
+
+Not verified live: the Render service has not been redeployed with this version (the Render connector was unavailable in this session): press **Manual Deploy** in Render, then run `python scripts/smoke_server.py --url https://fl-lung-cancer.onrender.com --admin-password <pw>`.
+Note: with `HF_TOKEN` set, hospital accounts (salted, server-peppered verifiers, names, usernames) are backed up to the public Hugging Face repo.

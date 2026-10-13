@@ -79,8 +79,11 @@ h4 { margin: 0 0 8px; font: 650 13px/1.3 var(--sans); letter-spacing: .5px; text
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 16px 0; }
 .grid.two { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
 .grid.three { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid.six { grid-template-columns: repeat(6, 1fr); }
+@media (max-width: 1280px) { .grid.six { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px) { .grid.six { grid-template-columns: repeat(2, 1fr); } }
 .stat { position: relative; overflow: hidden; }
-.stat .v { font: 700 30px/1.1 var(--serif); color: var(--brown); display: flex; align-items: baseline; gap: 8px; }
+.stat .v { font: 750 30px/1.1 var(--sans); letter-spacing: -.5px; font-variant-numeric: lining-nums tabular-nums; color: var(--brown); display: flex; align-items: baseline; gap: 8px; }
 .stat .l { margin-top: 4px; color: var(--ink2); font-size: 13px; }
 .stat .ic { position: absolute; right: 14px; top: 14px; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--surface3); color: var(--gold-d); }
 .stat.good .v { color: var(--good); } .stat.warn .v { color: var(--warn); } .stat.crit .v { color: var(--crit); }
@@ -159,7 +162,7 @@ tr.clickable { cursor: pointer; } tr.detail td { background: var(--surface2); }
 pre.code { margin: 8px 0; padding: 14px 16px; border-radius: var(--radius-sm); background: #2a1e12; color: #ffeec2; font: 12.5px/1.6 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-x: auto; white-space: pre; }
 .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; counter-reset: s; }
 .step { position: relative; padding: 16px 16px 16px 58px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.step::before { counter-increment: s; content: counter(s); position: absolute; left: 14px; top: 14px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 700 15px/1 var(--serif); color: #fff; background: linear-gradient(135deg, var(--gold), var(--gold-d)); }
+.step::before { counter-increment: s; content: counter(s); position: absolute; left: 14px; top: 14px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 700 15px/1 var(--sans); color: #fff; background: linear-gradient(135deg, var(--gold), var(--gold-d)); }
 .step.done::before { content: "\2713"; background: linear-gradient(135deg, #4a9a6a, var(--good)); } .step.active { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(231, 181, 60, .25), var(--shadow); }
 .step b { display: block; font-size: 14px; } .step span { font-size: 12.5px; color: var(--ink2); }
 .dropzone { border: 2px dashed #d7bf7b; border-radius: var(--radius); padding: 30px 20px; text-align: center; background: linear-gradient(180deg, #fffdf6, #fff6d9); transition: .15s; cursor: pointer; }
@@ -179,8 +182,8 @@ pre.code { margin: 8px 0; padding: 14px 16px; border-radius: var(--radius-sm); b
 .bar-track { height: 16px; border-radius: 8px; background: var(--surface3); overflow: hidden; border: 1px solid var(--line2); }
 .bar-fill { height: 100%; border-radius: 8px; transition: width 1.1s cubic-bezier(.2, .8, .2, 1); }
 .bar-fill.ord { background: linear-gradient(90deg, #e68a7c, var(--crit)); } .bar-fill.pro { background: linear-gradient(90deg, #6fb98a, var(--good)); }
-.ring-wrap { position: relative; width: 112px; height: 112px; flex-shrink: 0; } .ring-wrap .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font: 700 22px/1 var(--serif); color: var(--brown); }
-.ring-wrap .center small { display: block; font: 500 10.5px/1.2 var(--sans); color: var(--ink3); letter-spacing: .5px; text-transform: uppercase; margin-top: 2px; }
+.ring-wrap { position: relative; width: 112px; height: 112px; flex-shrink: 0; } .ring-wrap .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font: 750 24px/1 var(--sans); letter-spacing: -.5px; color: var(--brown); }
+.ring-wrap .center small { display: block; font: 600 10.5px/1.2 var(--sans); color: var(--ink3); letter-spacing: .6px; text-transform: uppercase; margin-top: 3px; }
 .heat { display: grid; gap: 2px; } .heat div { aspect-ratio: 1; border-radius: 3px; }
 
 /* ---------------------------------------------------------------- federated-learning animation */

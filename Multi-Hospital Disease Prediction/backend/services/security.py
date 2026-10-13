@@ -13,6 +13,7 @@ EVENT_TYPES: dict[str, tuple[str, str | None]] = {
     "round_aggregated": ("info", None),
     "registration": ("info", None),
     "hospital_restored": ("info", None),
+    "hospital_removed": ("medium", None),
     "publish_ok": ("info", None),
     "publish_error": ("medium", None),
     "login_failed": ("low", None),

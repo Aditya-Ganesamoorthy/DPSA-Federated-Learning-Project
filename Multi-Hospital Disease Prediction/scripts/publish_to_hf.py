@@ -33,6 +33,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.environ.get("HF_REPO_ID", "Adhi-gg029/lung-cancer-federated-learning"))
     ap.add_argument("--dry-run", action="store_true", help="validate files and show what would be uploaded")
+    ap.add_argument("--readme-only", action="store_true", help="refresh only the model card; leave the model, history and accounts untouched")
     a = ap.parse_args()
 
     from ml import config, model_io
@@ -47,6 +48,8 @@ def main() -> int:
     hist_path = ROOT / "state" / "history.json"
     files["history.json"] = (hist_path.read_bytes() if hist_path.exists() else
                              json.dumps([{"version": 0, "note": "initial primary model (FedAvg over 3 simulated hospitals)"}]).encode())
+    if a.readme_only:
+        files = {"README.md": files["README.md"]}
     print(f"Model v{version}: {sum(a.size for a in arrays)} parameters. Files to publish to {a.repo}:")
     for k, v in files.items():
         print(f"  {k:28s} {len(v):>8d} bytes")
@@ -68,7 +71,7 @@ def main() -> int:
         who = api.whoami()["name"]
         print(f"Authenticated as: {who}")
         api.create_repo(a.repo, repo_type="model", exist_ok=True)
-        info = api.create_commit(repo_id=a.repo, repo_type="model", commit_message="Publish primary global model v0",
+        info = api.create_commit(repo_id=a.repo, repo_type="model", commit_message="Update model card" if a.readme_only else "Publish primary global model v0",
                                  operations=[CommitOperationAdd(k, v) for k, v in files.items()])
     except HfHubHTTPError as e:
         code = getattr(e.response, "status_code", None)

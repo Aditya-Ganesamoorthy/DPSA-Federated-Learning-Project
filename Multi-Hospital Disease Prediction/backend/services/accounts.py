@@ -127,6 +127,13 @@ class AccountStore:
             self._persist()
             return self.public(username)
 
+    def remove(self, username: str) -> None:
+        with self.lock:
+            if username not in self.accounts:
+                raise AccountError("Unknown hospital", 404)
+            del self.accounts[username]
+            self._persist()
+
     def public(self, username: str) -> dict:
         a = self.accounts[username]
         return {k: a[k] for k in ("username", "name", "parent", "joined", "status")}

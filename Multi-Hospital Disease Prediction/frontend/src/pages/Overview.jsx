@@ -17,7 +17,7 @@ function RiskRing({ risk, size = 112 }) {
         <circle cx="56" cy="56" r={r} fill="none" stroke={col} strokeWidth="11" strokeLinecap="round" strokeDasharray={c}
                 strokeDashoffset={c * (1 - risk.score / 100)} transform="rotate(-90 56 56)" style={{ transition: 'stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)' }} />
       </svg>
-      <div className="center"><div>{risk.score}<small>{risk.level} risk</small></div></div>
+      <div className="center"><div>{risk.score}<small>{risk.level}</small></div></div>
     </div>
   )
 }
@@ -75,7 +75,7 @@ function SecurityDashboard({ d, onRefresh }) {
   const dpTone = { enabled: 'good', partial: 'info', disabled: 'warn', none: '' }[priv.status]
   return (
     <>
-      <div className="grid">
+      <div className="grid six">
         <StatCard icon="users" label="Registered hospitals" value={d.network.registered} hint={`${d.network.participated} have contributed`} />
         <StatCard icon="network" label="Reported this round" value={`${d.network.active_now}/${d.network.needed_per_round}`} hint="hospitals needed to close the round" />
         <StatCard icon="layers" label="Global model version" value={`v${d.model.version}`} hint={d.model.aggregator === 'median' ? 'median aggregation' : 'FedAvg aggregation'} />
@@ -276,8 +276,8 @@ function Eda() {
             </div>
             <div className="grid two">
               <ChartCard title="Class balance" height={260}>
-                <PieChart>
-                  <Pie data={pie} dataKey="value" nameKey="name" innerRadius={62} outerRadius={96} paddingAngle={3} label={(p) => `${(p.percent * 100).toFixed(1)}%`}>
+                <PieChart margin={{ top: 24, bottom: 24 }}>
+                  <Pie data={pie} dataKey="value" nameKey="name" innerRadius={56} outerRadius={86} paddingAngle={3} label={(p) => `${(p.percent * 100).toFixed(1)}%`}>
                     <Cell fill="var(--s1)" /><Cell fill="var(--s2)" />
                   </Pie>
                   <Tooltip /><Legend />

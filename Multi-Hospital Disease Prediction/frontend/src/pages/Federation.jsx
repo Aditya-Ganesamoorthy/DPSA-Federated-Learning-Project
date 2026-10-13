@@ -50,25 +50,19 @@ function RoundPanel({ s, network, onChange }) {
 
   return (
     <div className="card hero">
-      <div className="grid two" style={{ margin: 0, alignItems: 'center' }}>
-        <div><FlowAnimation phase={phase} version={s.version} pending={s.n_pending} needed={need} hfStatus={hfStatus} others={others} youLabel={user?.username || 'Hospital'} compact /></div>
+      <FlowAnimation phase={phase} version={s.version} pending={s.n_pending} needed={need} hfStatus={hfStatus} others={others} youLabel={user?.username || 'Hospital'} />
+      <hr style={{ border: 0, borderTop: '1px solid #efd88e', margin: '14px 0 18px' }} />
+      <div className="grid two" style={{ margin: 0, alignItems: 'start' }}>
         <div>
           <div className="eyebrow">Round building model v{s.version + 1}</div>
           <div style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
-            <span style={{ font: '700 40px var(--serif)', color: 'var(--brown)' }}>{s.n_pending}<span className="muted" style={{ fontSize: 22 }}> / {need}</span></span>
+            <span style={{ font: '750 40px var(--sans)', letterSpacing: '-1px', color: 'var(--brown)' }}>{s.n_pending}<span className="muted" style={{ fontSize: 22 }}> / {need}</span></span>
             <span className="muted">hospitals have reported</span>
           </div>
           <div className="meter" style={{ margin: '10px 0' }}><i style={{ width: `${Math.min(100, (s.n_pending / need) * 100)}%`, background: 'linear-gradient(90deg, var(--gold2), var(--gold-d))' }} /></div>
           <div className="small" style={{ minHeight: 22 }}>{s.pending_hospitals.length
             ? <>Waiting on: {s.pending_hospitals.map((h) => <Badge key={h} tone="info">{h}</Badge>)}</> : 'No updates yet. The first hospital to train starts the round.'}</div>
-          <dl className="kv" style={{ margin: '14px 0' }}>
-            <dt>Aggregation</dt><dd>{s.aggregator === 'median' ? 'Coordinate-wise median (≥ 3 hospitals)' : 'FedAvg (weighted by rows)'}</dd>
-            <dt>Update size limit</dt><dd>{s.max_update_norm} (L2 distance)</dd>
-            <dt>Round risk so far</dt><dd><RiskBadge risk={s.round.risk} /></dd>
-            <dt>Rejected this round</dt><dd>{Object.keys(s.round.rejected).length ? Object.entries(s.round.rejected).map(([k, v]) => `${v} ${k}`).join(', ') : 'none'}</dd>
-            <dt>Hugging Face</dt><dd>{!s.hf_repo ? <Badge>not configured</Badge> : <Badge tone={pub === 'ok' ? 'good' : pub === 'error' ? 'crit' : ''} dot>{pub === 'ok' ? `v${s.last_publish.version} published` : pub === 'error' ? 'last publish failed' : 'waiting for first publish'}</Badge>}</dd>
-          </dl>
-          <div className="row">
+          <div className="row" style={{ marginTop: 16 }}>
             <button className="btn" onClick={download} disabled={dl.busy}><Icon name="download" size={16} />{dl.busy ? 'Downloading…' : `Download model v${s.version}`}</button>
             <a className="btn secondary" href={`https://huggingface.co/${repo}`} target="_blank" rel="noreferrer"><Icon name="cloud" size={16} />Open on Hugging Face</a>
             {user?.role === 'admin' && <button className="btn secondary" onClick={aggregate} disabled={admin.busy || s.n_pending === 0}>Aggregate pending now</button>}
@@ -76,6 +70,13 @@ function RoundPanel({ s, network, onChange }) {
           {dl.err && <div className="err-msg" role="alert">{dl.err}</div>}
           {admin.msg && <div className={admin.err ? 'err-msg' : 'small'} role="status">{admin.msg}</div>}
         </div>
+        <dl className="kv" style={{ margin: 0 }}>
+          <dt>Aggregation</dt><dd>{s.aggregator === 'median' ? 'Coordinate-wise median (≥ 3 hospitals)' : 'FedAvg (weighted by rows)'}</dd>
+          <dt>Update size limit</dt><dd>{s.max_update_norm} (L2 distance)</dd>
+          <dt>Round risk so far</dt><dd><RiskBadge risk={s.round.risk} /></dd>
+          <dt>Rejected this round</dt><dd>{Object.keys(s.round.rejected).length ? Object.entries(s.round.rejected).map(([k, v]) => `${v} ${k}`).join(', ') : 'none'}</dd>
+          <dt>Hugging Face</dt><dd>{!s.hf_repo ? <Badge>not configured</Badge> : <Badge tone={pub === 'ok' ? 'good' : pub === 'error' ? 'crit' : ''} dot>{pub === 'ok' ? `v${s.last_publish.version} published` : pub === 'error' ? 'last publish failed' : 'waiting for first publish'}</Badge>}</dd>
+        </dl>
       </div>
     </div>
   )
@@ -85,8 +86,12 @@ function Network({ rows, me, isAdmin, onChange }) {
   const [busy, setBusy] = useState(null)
   const [err, setErr] = useState(null)
   const act = async (h, action) => {
+    if (action === 'remove' && !window.confirm(`Remove ${h.name}? Its account and any pending update are deleted.`)) return
     setBusy(h.username); setErr(null)
-    try { await request(`/admin/hospitals/${h.username}/${action}`, { method: 'POST' }); onChange() } catch (e) { setErr(e.message) } finally { setBusy(null) }
+    try {
+      await request(action === 'remove' ? `/admin/hospitals/${h.username}` : `/admin/hospitals/${h.username}/${action}`, { method: action === 'remove' ? 'DELETE' : 'POST' })
+      onChange()
+    } catch (e) { setErr(e.message) } finally { setBusy(null) }
   }
   if (!rows.length) return <EmptyState>No hospital has registered yet. Be the first: use “Register hospital”.</EmptyState>
   return (
@@ -100,9 +105,13 @@ function Network({ rows, me, isAdmin, onChange }) {
         { key: 'rejected', label: 'Rejected', num: true, render: (h) => (h.rejected ? <Badge tone="crit">{h.rejected}</Badge> : 0) },
         { key: 'dp', label: 'Privacy (DP)', render: (h) => (h.dp_updates ? <Badge tone="good">{h.dp_updates} update(s), ε ≈ {h.epsilon}</Badge> : <span className="muted small">not used</span>) },
         { key: 'last', label: 'Last model', render: (h) => (h.last_version != null ? `v${h.last_version}` : '-') },
-        ...(isAdmin ? [{ key: 'admin', label: 'Admin', render: (h) => (h.status === 'suspended'
-          ? <button className="btn sm secondary" disabled={busy === h.username} onClick={() => act(h, 'restore')}>Restore</button>
-          : <button className="btn sm danger" disabled={busy === h.username} onClick={() => act(h, 'suspend')}>Suspend</button>) }] : []),
+        ...(isAdmin ? [{ key: 'admin', label: 'Admin', render: (h) => (
+          <span style={{ display: 'inline-flex', gap: 6 }}>
+            {h.status === 'suspended'
+              ? <button className="btn sm secondary" disabled={busy === h.username} onClick={() => act(h, 'restore')}>Restore</button>
+              : <button className="btn sm secondary" disabled={busy === h.username} onClick={() => act(h, 'suspend')}>Suspend</button>}
+            <button className="btn sm danger" disabled={busy === h.username} onClick={() => act(h, 'remove')}>Remove</button>
+          </span>) }] : []),
       ]} />
       {err && <div className="err-msg" role="alert">{err}</div>}
     </>
