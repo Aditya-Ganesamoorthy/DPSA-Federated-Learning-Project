@@ -1,5 +1,5 @@
-# Render Blueprint (documentation of the deployed service; same settings as the dashboard/API setup).
-# Secrets (sync: false) are entered in the Render dashboard and are never stored in git.
+# Render Blueprint: New > Blueprint > pick this GitHub repo. Render then prompts for the secrets marked sync: false
+# (they are entered in the Render dashboard and are never stored in git) and deploys on every push to main.
 services:
   - type: web
     name: fl-lung-cancer
@@ -25,5 +25,3 @@ services:
         value: Adhi-gg029/lung-cancer-federated-learning
       - key: HF_TOKEN              # Hugging Face write token (enables publishing + restart recovery)
         sync: false
-      - key: CORS_ORIGINS
-        value: ""
