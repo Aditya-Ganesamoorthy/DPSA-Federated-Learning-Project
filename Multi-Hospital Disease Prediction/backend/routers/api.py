@@ -18,7 +18,8 @@ def _store(request: Request):
 @router.get("/health")
 def health(request: Request):
     return {"status": "ok", "results_loaded": _store(request).all_loaded(),
-            "global_model_version": request.app.state.federation.version}
+            "global_model_version": request.app.state.federation.version,
+            "registration": "invite" if request.app.state.settings.invite_code else "open"}
 
 
 @router.get("/features")

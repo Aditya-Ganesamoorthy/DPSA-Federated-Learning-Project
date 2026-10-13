@@ -34,6 +34,16 @@ export async function loginRequest(username, password) {
   saveSession(session)
   return session
 }
+export async function registerRequest(form) {
+  const data = await request('/auth/register', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hospital_name: form.hospitalName, parent_network: form.parent || '', username: form.username,
+      password: form.password, invite_code: form.invite || '' }),
+  })
+  session = { token: data.access_token, username: data.username, role: data.role }
+  saveSession(session)
+  return session
+}
 export function logoutRequest() { session = null; saveSession(null) }
 
 export async function request(path, options = {}) {
