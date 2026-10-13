@@ -10,3 +10,9 @@ data/raw
 *.log
 *.err
 .pytest_cache
+
+# secrets must never enter an image
+*access token*.txt
+*.token
+.env
+**/.env
