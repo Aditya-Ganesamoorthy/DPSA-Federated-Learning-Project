@@ -17,6 +17,9 @@ Implementing Federated Learning for Privacy Preservation*). Hospitals download t
 data **without sharing any raw rows**, and send back only updated weights. The coordinator averages the updates (FedAvg) into
 the next version and publishes it here.
 
+**Live app (dashboard, hospital registration, training, security audit):** https://fl-lung-cancer.onrender.com  
+**Source code, report and experiments:** https://github.com/Aditya-Ganesamoorthy/DPSA-Federated-Learning-Project
+
 > **Educational demo, not medical advice. Do not use for diagnosis.**
 > On the public Kaggle dataset used here the label is essentially unpredictable from the 15 features (cross-validated
 > logistic regression ROC-AUC 0.50, random forest 0.52). This model scores about 0.51 AUC on a 600-row test set, which is
