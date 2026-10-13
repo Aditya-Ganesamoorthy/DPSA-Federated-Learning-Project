@@ -1,0 +1,29 @@
+# Render Blueprint (documentation of the deployed service; same settings as the dashboard/API setup).
+# Secrets (sync: false) are entered in the Render dashboard and are never stored in git.
+services:
+  - type: web
+    name: fl-lung-cancer
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerContext: ./Multi-Hospital Disease Prediction
+    dockerfilePath: ./Multi-Hospital Disease Prediction/Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: SECRET_KEY            # signs tokens and derives hospital passwords; keep stable
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: MIN_CLIENTS           # hospitals that must report before a new global model is built
+        value: "2"
+      - key: AGGREGATOR            # fedavg | median (median needs >= 3 hospitals)
+        value: fedavg
+      - key: HF_REPO_ID
+        value: Adhi-gg029/lung-cancer-federated-learning
+      - key: HF_TOKEN              # Hugging Face write token (enables publishing + restart recovery)
+        sync: false
+      - key: CORS_ORIGINS
+        value: ""

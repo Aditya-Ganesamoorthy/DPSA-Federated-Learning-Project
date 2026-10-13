@@ -239,3 +239,15 @@ def test_publish_called_when_configured(tmp_path, monkeypatch):
             break
         time.sleep(0.05)
     assert 0 in calls and 1 in calls          # v0 published at startup, v1 after the round
+
+
+def test_median_aggregator_ignores_a_poisoned_update(tmp_path):
+    app = create_app(make_settings(tmp_path, aggregator="median"))
+    apis = [_api(app, h) for h in HOSPITALS]
+    base, _ = apis[0].download_model()
+    apis[0].submit(0, 100, [x + 0.01 for x in base])
+    apis[1].submit(0, 100, [x + 0.02 for x in base])
+    apis[2].submit(0, 100, [x + 15.0 / np.sqrt(1057) for x in base])      # large (but norm-guard-passing) outlier
+    got, _ = apis[0].download_model()
+    np.testing.assert_allclose(got[0], base[0] + 0.02, atol=1e-5)          # median picks the middle update
+    assert apis[0].status()["aggregator"] == "median"

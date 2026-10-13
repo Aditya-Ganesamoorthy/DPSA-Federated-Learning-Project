@@ -97,7 +97,7 @@ class Federation:
             return {"version": self.version, "min_clients": self.s.min_clients,
                     "pending_hospitals": sorted(self.pending), "n_pending": len(self.pending),
                     "n_params": int(sum(a.size for a in self.weights)), "max_update_norm": self.s.max_update_norm,
-                    "hf_repo": self.s.hf_repo_id or None, "last_publish": self.last_publish,
+                    "aggregator": self.s.aggregator, "hf_repo": self.s.hf_repo_id or None, "last_publish": self.last_publish,
                     "latest": self.history[-1] if self.history else None}
 
     def submit(self, hospital_id: str, base_version: int, num_examples: int, arrays: list[np.ndarray]) -> dict:
@@ -138,9 +138,16 @@ class Federation:
     def _aggregate(self) -> dict:
         hospitals = sorted(self.pending)
         counts = [self.pending[h]["n"] for h in hospitals]
-        self.weights = model_io.weighted_average([self.pending[h]["arrays"] for h in hospitals], counts)
+        updates = [self.pending[h]["arrays"] for h in hospitals]
+        if self.s.aggregator == "median" and len(updates) >= 3:
+            # robust to a minority of poisoned updates (measured in results/extras.json); ignores sample counts
+            self.weights = [np.median(np.stack([u[i] for u in updates]), axis=0).astype(np.float32)
+                            for i in range(len(updates[0]))]
+        else:
+            self.weights = model_io.weighted_average(updates, counts)
         self.version += 1
-        rec = self._record(self.version, hospitals, counts, source=f"FedAvg of {len(hospitals)} hospital update(s)")
+        rec = self._record(self.version, hospitals, counts, source=f"{'coordinate-wise median' if self.s.aggregator == 'median' and len(hospitals) >= 3 else 'FedAvg'}"
+                                             f" of {len(hospitals)} hospital update(s)")
         self.history.append(rec)
         self.pending = {}
         self._persist()

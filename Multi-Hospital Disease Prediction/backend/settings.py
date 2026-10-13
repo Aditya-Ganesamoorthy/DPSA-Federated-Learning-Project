@@ -34,6 +34,7 @@ class Settings:
     min_clients: int = field(default_factory=lambda: _int("MIN_CLIENTS", 2))
     max_update_norm: float = field(default_factory=lambda: float(os.environ.get("MAX_UPDATE_NORM", "20")))
     max_examples: int = 1_000_000
+    aggregator: str = field(default_factory=lambda: os.environ.get("AGGREGATOR", "fedavg").lower())  # fedavg | median
     # hugging face (optional)
     hf_repo_id: str = field(default_factory=lambda: os.environ.get("HF_REPO_ID", ""))
     hf_token: str = field(default_factory=lambda: os.environ.get("HF_TOKEN", ""))

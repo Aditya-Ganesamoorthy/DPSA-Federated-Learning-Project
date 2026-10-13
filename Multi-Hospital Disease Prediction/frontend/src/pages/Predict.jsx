@@ -19,7 +19,7 @@ function RiskGauge({ p, thr }) {
 function Form({ spec }) {
   const init = Object.fromEntries(spec.fields.map((f) => [f.name, f.type === 'bool' ? false : f.type === 'enum' ? f.options[0] : '']))
   const [vals, setVals] = useState({ ...init, age: 55 })
-  const [model, setModel] = useState('federated')
+  const [model, setModel] = useState('global')
   const [res, setRes] = useState(null)
   const [err, setErr] = useState(null)
   const [fieldErr, setFieldErr] = useState({})
@@ -55,7 +55,7 @@ function Form({ spec }) {
       <div className="card">
         <label className="f" style={{ maxWidth: 260, marginBottom: 12 }}>Model
           <select value={model} onChange={(e) => setModel(e.target.value)}>
-            {spec.models.map((m) => <option key={m} value={m}>{m.replace('_', ' + ')}</option>)}
+            {spec.models.map((m) => <option key={m} value={m}>{m === 'global' ? 'global (live, latest version)' : m.replace('_', ' + ')}</option>)}
           </select>
         </label>
         <div className="fields">
@@ -86,7 +86,7 @@ function Form({ spec }) {
       {err && <div className="err" role="alert"><b>Error.</b> {err.message}</div>}
       {res && (
         <div className="card" style={{ marginTop: 12 }} role="status">
-          <h4>Result ({res.model_used.replace('_', ' + ')})</h4>
+          <h4>Result ({res.model_used.replace('_', ' + ')}{res.model_used === 'global' ? ` v${res.model_version}` : ''})</h4>
           <RiskGauge p={res.probability} thr={res.threshold} />
           <p>Predicted label: <b>{res.label === 1 ? 'cancer (positive)' : 'no cancer (negative)'}</b></p>
           <p className="lede">{res.disclaimer} {res.model_note}</p>
