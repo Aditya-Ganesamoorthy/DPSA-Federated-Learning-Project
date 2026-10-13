@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from ml import schema
 
-MODEL_CHOICES = Literal["centralized", "federated", "federated_dp"]
+MODEL_CHOICES = Literal["global", "centralized", "federated", "federated_dp"]
 
 # Patient fields are generated from the real feature list, never hand-copied.
 _fields = {c: (bool, Field(..., description=f"{c.replace('_', ' ')} (true = yes)")) for c in schema.BINARY_FEATURES}
@@ -22,7 +22,7 @@ PatientFeatures = create_model(
 
 class PredictRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    model: MODEL_CHOICES = "federated"
+    model: MODEL_CHOICES = "global"
     patient: PatientFeatures  # type: ignore[valid-type]
 
 
@@ -31,6 +31,7 @@ class PredictResponse(BaseModel):
     label: int
     threshold: float
     model_used: str
+    model_version: int
     disclaimer: str
     model_note: str
 

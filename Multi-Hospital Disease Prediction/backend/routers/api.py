@@ -3,10 +3,12 @@ from __future__ import annotations
 import re
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.schemas import DISCLAIMER, MODEL_NOTE, PredictRequest, PredictResponse
-from backend.services.predictor import ModelsMissing
+from backend.routers.fl import current_user
+from backend.services.auth import User
+from backend.services.predictor import MODEL_CHOICES, ModelsMissing
 from ml import schema, secagg
 
 router = APIRouter(prefix="/api/v1")
@@ -21,7 +23,8 @@ def _store(request: Request):
 @router.get("/health")
 def health(request: Request):
     store, pred = _store(request), request.app.state.predictor
-    return {"status": "ok", "results_loaded": store.all_loaded(), "models_loaded": pred.available()}
+    return {"status": "ok", "results_loaded": store.all_loaded(), "models_loaded": pred.available(),
+            "global_model_version": request.app.state.federation.version}
 
 
 @router.get("/features")
@@ -31,7 +34,7 @@ def features():
         {"name": "gender", "type": "enum", "options": ["M", "F"]},
         {"name": "age", "type": "int", "min": schema.AGE_RANGE[0], "max": schema.AGE_RANGE[1]},
         *[{"name": c, "type": "bool"} for c in schema.BINARY_FEATURES]],
-        "models": ["centralized", "federated", "federated_dp"]}
+        "models": list(MODEL_CHOICES)}
 
 
 @router.get("/meta")
@@ -122,7 +125,7 @@ def secagg_demo(seed: int = Query(0, ge=0, le=10_000), drop: int | None = Query(
 
 
 @router.post("/predict", response_model=PredictResponse)
-def predict(req: PredictRequest, request: Request):
+def predict(req: PredictRequest, request: Request, user: User = Depends(current_user)):
     # NOTE: request bodies are deliberately never logged.
     pred = request.app.state.predictor
     try:

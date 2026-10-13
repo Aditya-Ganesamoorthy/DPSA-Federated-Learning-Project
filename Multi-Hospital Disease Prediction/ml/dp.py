@@ -38,6 +38,22 @@ class AccountantStore:
         acc.history = list(hist)
         return float(acc.get_epsilon(delta=delta))
 
+    def save(self, path) -> None:
+        """Persist the history so epsilon keeps composing across runs of a hospital client."""
+        import json
+        from pathlib import Path
+        Path(path).write_text(json.dumps(self.history), encoding="utf-8")
+
+    @classmethod
+    def load(cls, path) -> "AccountantStore":
+        import json
+        from pathlib import Path
+        store = cls()
+        p = Path(path)
+        if p.is_file():
+            store.history = {k: [tuple(e) for e in v] for k, v in json.loads(p.read_text(encoding="utf-8")).items()}
+        return store
+
     def max_epsilon(self, delta: float = config.DELTA) -> float:
         return max((self.epsilon(c, delta) for c in self.history), default=0.0)
 

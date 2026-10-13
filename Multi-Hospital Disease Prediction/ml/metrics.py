@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import math
 
 import numpy as np
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
@@ -58,14 +57,4 @@ def mean_std(runs: list[dict]) -> dict:
     return out
 
 
-def clean_json(o):
-    """Recursively convert NaN/inf to None so output is valid JSON."""
-    if isinstance(o, dict):
-        return {k: clean_json(v) for k, v in o.items()}
-    if isinstance(o, (list, tuple)):
-        return [clean_json(v) for v in o]
-    if isinstance(o, (np.floating, float)):
-        return None if (math.isnan(o) or math.isinf(o)) else float(o)
-    if isinstance(o, np.integer):
-        return int(o)
-    return o
+from ml.jsonutil import clean_json  # noqa: E402,F401  (re-exported for backwards compatibility)

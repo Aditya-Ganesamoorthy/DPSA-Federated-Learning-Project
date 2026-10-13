@@ -1,0 +1,8 @@
+# Hospital client (runs on the hospital's own machine; local data never leaves it)
+# CPU torch:  pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.1
+numpy
+pandas
+httpx
+opacus==1.6.0       # only needed for --sigma > 0 (local differential privacy)
+huggingface_hub     # only needed for --source hf

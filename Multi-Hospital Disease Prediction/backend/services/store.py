@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ml.metrics import clean_json
+from ml.jsonutil import clean_json
 
 REQUIRED = ["comparison.json", "client_summary.json", "privacy_curve.json", "attack.json",
             "communication.json", "run_meta.json", "preprocess_report.json"]
