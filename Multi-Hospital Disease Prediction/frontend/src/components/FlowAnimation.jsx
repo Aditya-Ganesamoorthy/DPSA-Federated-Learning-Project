@@ -37,7 +37,7 @@ export default function FlowAnimation({ phase = 'idle', progress = 0, loss = nul
   const ringC = 2 * Math.PI * 46
   const frac = Math.min(1, needed ? pending / needed : 0)
   const trainC = 2 * Math.PI * 58
-  const hfTone = hfStatus === 'ok' ? 'var(--good)' : hfStatus === 'error' ? 'var(--crit)' : 'var(--ink3)'
+  const hfTone = hfStatus === 'ok' || hfStatus === 'connected' ? 'var(--good)' : hfStatus === 'error' ? 'var(--crit)' : 'var(--ink3)'
   const shown = others.slice(0, 4)
 
   return (

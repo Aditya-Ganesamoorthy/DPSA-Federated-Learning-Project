@@ -153,7 +153,7 @@ function Trainer({ spec }) {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <FlowAnimation phase={run.phase} progress={run.progress} loss={run.loss} version={st?.version} newVersion={run.newVersion}
-          pending={run.waiting?.pending ?? st?.n_pending ?? 0} needed={run.waiting?.needed ?? st?.min_clients ?? 2} hfStatus={run.hf}
+          pending={run.waiting?.pending ?? st?.n_pending ?? 0} needed={run.waiting?.needed ?? st?.min_clients ?? 2} hfStatus={['publishing', 'done'].includes(run.phase) ? run.hf : (st?.hf_repo ? 'connected' : 'not configured')}
           youLabel={user?.username || 'Your hospital'} others={[]} />
         {run.phase === 'training' && <div className="gauge" style={{ marginTop: 8 }} role="progressbar" aria-valuenow={Math.round(run.progress * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${run.progress * 100}%` }} /></div>}
       </div>
@@ -220,6 +220,9 @@ function Trainer({ spec }) {
         </div>
       </div>
 
+      {run.phase === 'waiting' && (
+        <div className="note" role="status"><b>Your update is accepted. The round needs {run.waiting?.needed ?? 2} hospitals.</b> Open a second window (a private window works), register another hospital, upload a different CSV and train. This page then finishes on its own. To demo with one hospital, set <span className="mono">MIN_CLIENTS=1</span> on the server.</div>
+      )}
       {isAdmin && <div className="note info">You are signed in as the administrator. Administrators manage the network but do not contribute data: sign in with a hospital account to train.</div>}
 
       {run.error && <div className="err" role="alert" style={{ marginTop: 16 }}><b>Could not finish.</b> {run.error}</div>}
