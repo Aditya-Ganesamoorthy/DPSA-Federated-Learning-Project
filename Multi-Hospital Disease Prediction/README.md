@@ -93,7 +93,7 @@ huggingface/  model card published to the Hub        scripts/  export_npz, publi
 Dockerfile, requirements-server.txt, ../render.yaml   deployment
 ```
 
-## Honest implementation notes
+## Implementation notes
 - Experiments run Flower **in-process** (real `NumPyClient` + real `FedAvg`, no ray/gRPC). The **live server** uses the numpy FedAvg that the tests verify equal to Flower's, so it fits Render's 512 MB free instance without torch.
 - Secure aggregation is a **simulation** (demo page and experiments). The live protocol protects data by keeping it on-site, authenticated TLS transport, optional client-side DP, update-norm checks and an optional median aggregator; updates are visible to the server.
 - Render's free tier sleeps when idle (first request can take about a minute) and has an ephemeral disk. With `HF_TOKEN` set, the global model, its round history and the hospital accounts (salted, server-peppered password hashes, never passwords) are backed up to the Hugging Face repo and restored after a restart. Without it, a restart returns to v0 and loses accounts.
